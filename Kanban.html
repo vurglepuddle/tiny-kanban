@@ -1,0 +1,4334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban</title>
+  <link rel="icon" href="icon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         oklch(0.96 0.010 72);
+      --col-bg:     oklch(0.925 0.009 72);
+      --col-drop:   oklch(0.91 0.035 245);
+      --card-bg:    oklch(0.995 0.003 72);
+      --text:       oklch(0.19 0.015 72);
+      --text-2:     oklch(0.52 0.010 72);
+      --text-3:     oklch(0.70 0.008 72);
+      --border:     oklch(0.875 0.008 72);
+      --border-2:   oklch(0.92 0.005 72);
+      --accent:     oklch(0.56 0.14 245);
+      --accent-h:   oklch(0.50 0.14 245);
+      --accent-bg:  oklch(0.95 0.040 245);
+      --danger:     oklch(0.55 0.18 20);
+      --danger-bg:  oklch(0.96 0.04 20);
+      --green:      oklch(0.62 0.16 150);
+      --r-card:     10px;
+      --r-col:      14px;
+      --font:       'DM Sans', system-ui, sans-serif;
+      color-scheme: light;
+    }
+
+    .dark {
+      --bg:         oklch(0.17 0.018 65);
+      --col-bg:     oklch(0.21 0.016 65);
+      --col-drop:   oklch(0.23 0.045 245);
+      --card-bg:    oklch(0.245 0.014 65);
+      --text:       oklch(0.88 0.012 78);
+      --text-2:     oklch(0.64 0.010 78);
+      --text-3:     oklch(0.48 0.008 78);
+      --border:     oklch(0.29 0.015 65);
+      --border-2:   oklch(0.26 0.012 65);
+      --accent:     oklch(0.66 0.13 245);
+      --accent-h:   oklch(0.72 0.13 245);
+      --accent-bg:  oklch(0.25 0.050 245);
+      --danger:     oklch(0.68 0.16 20);
+      --danger-bg:  oklch(0.23 0.050 20);
+      --green:      oklch(0.68 0.16 150);
+      color-scheme: dark;
+    }
+
+    html, body, #root {
+      height: 100%;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    #root {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .topbar, .column, .card, .modal, .overlay,
+    .add-btn, .field-input, .tbtn, .icon-btn,
+    .col-count, .modal-close, .btn-ghost-sm,
+    .drop-placeholder, .save-badge-dot {
+      transition: background-color 0.35s ease, color 0.35s ease,
+                  border-color 0.35s ease, box-shadow 0.35s ease;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      min-height: 54px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 22px;
+      gap: 14px;
+      flex-shrink: 0;
+      z-index: 10;
+      flex-wrap: wrap;
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+    .topbar-logo {
+      min-width: 42px;
+      max-width: min(280px, 42vw);
+      height: 30px;
+      padding: 0 2px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      color: var(--text);
+      font-family: inherit;
+      text-align: left;
+      cursor: text;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .topbar-logo:hover {
+      background: var(--card-bg);
+      border-color: var(--border-2);
+    }
+    .topbar-logo:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      background: var(--card-bg);
+      border-color: var(--accent);
+    }
+    .topbar-pip {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .topbar-spacer { flex: 1; }
+    .kbd-hint {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      color: var(--text-3);
+    }
+    .kbd {
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+      font-size: 10.5px;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 1.5px;
+      border-radius: 4px;
+      background: var(--col-bg);
+      color: var(--text-2);
+      line-height: 1.4;
+    }
+    .save-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-3);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .save-badge.show { opacity: 1; }
+    .save-badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+    .backup-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-3);
+      min-width: 86px;
+    }
+    .backup-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-3);
+      opacity: 0.7;
+    }
+    .backup-status.linked .backup-dot,
+    .backup-status.saved .backup-dot { background: var(--green); opacity: 1; }
+    .backup-status.saving .backup-dot { background: var(--accent); opacity: 1; }
+    .backup-status.error .backup-dot { background: var(--danger); opacity: 1; }
+    .backup-wrap {
+      position: relative;
+    }
+    .backup-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 220px;
+      padding: 7px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card-bg);
+      box-shadow: 0 14px 42px oklch(0.18 0 0 / 0.18), 0 2px 8px oklch(0.18 0 0 / 0.08);
+      z-index: 30;
+      animation: fadeIn 0.12s ease;
+    }
+    .backup-menu-item {
+      width: 100%;
+      min-height: 34px;
+      padding: 0 10px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-2);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .backup-menu-item:hover {
+      background: var(--col-bg);
+      color: var(--text);
+    }
+    .backup-menu-item:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .backup-menu-item svg {
+      opacity: 0.75;
+      flex-shrink: 0;
+    }
+    .backup-menu-item.danger {
+      color: var(--danger);
+    }
+    .backup-menu-item.danger:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+    .backup-menu-sep {
+      height: 1px;
+      margin: 7px 3px;
+      background: var(--border-2);
+    }
+    .backup-menu-status {
+      margin: 7px 3px 2px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-2);
+      max-width: 100%;
+    }
+    .backup-menu-status span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tbtn {
+      height: 34px;
+      padding: 0 14px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .tbtn:hover { background: var(--card-bg); color: var(--text); border-color: oklch(0.80 0.008 72); }
+    .tbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .tbtn svg { opacity: 0.7; }
+    .tbtn.backup-attention {
+      color: var(--danger);
+      border-color: var(--danger);
+      background: var(--danger-bg);
+    }
+    .tbtn.backup-attention svg { opacity: 0.95; }
+    .tbtn.backup-ok {
+      border-color: var(--green);
+    }
+    .backup-alert {
+      margin-left: 2px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    /* ── Filter strip ── */
+    .filter-strip {
+      display: flex;
+      align-items: center;
+      column-gap: 12px;
+      row-gap: 7px;
+      flex-wrap: wrap;
+    }
+    .filter-strip-label {
+      margin-right: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-3);
+    }
+    .filter-clear {
+      font: inherit;
+      font-size: 12px;
+      color: var(--text-2);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px 7px;
+      border-radius: 5px;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .filter-clear:hover { color: var(--text); }
+
+    /* ── Board ── */
+    .board {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      gap: 18px;
+      padding: 22px 22px 22px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      align-items: flex-start;
+    }
+    .board::-webkit-scrollbar { height: 5px; }
+    .board::-webkit-scrollbar-track { background: transparent; }
+    .board::-webkit-scrollbar-thumb { background: oklch(0.82 0.008 72); border-radius: 3px; }
+
+    /* ── Column ── */
+    .column {
+      width: 276px;
+      flex-shrink: 0;
+      border-radius: var(--r-col);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 54px - 44px);
+      background: var(--col-bg);
+      transition: background 0.2s ease, opacity 0.18s ease, transform 0.18s ease;
+      position: relative;
+    }
+    .column.drop-active { background: var(--col-drop); }
+    .column.col-dragging { opacity: 0.45; transform: scale(0.985); }
+    .column.col-drop-before::before,
+    .column.col-drop-after::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 3px;
+    }
+    .column.col-drop-before::before { left: -10px; }
+    .column.col-drop-after::after  { right: -10px; }
+
+    .col-header {
+      padding: 14px 16px 10px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      flex-shrink: 0;
+      cursor: grab;
+    }
+    .col-header:active { cursor: grabbing; }
+    .col-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: 0 0 0 2px transparent;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .col-dot:hover {
+      transform: scale(1.25);
+      box-shadow: 0 0 0 3px var(--border-2);
+    }
+    .col-dot:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--accent);
+    }
+    .col-color-wrap {
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .col-color-menu {
+      position: absolute;
+      top: 18px;
+      left: -8px;
+      z-index: 35;
+      display: grid;
+      grid-template-columns: repeat(4, 22px);
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--card-bg);
+      box-shadow: 0 12px 34px oklch(0.18 0 0 / 0.16), 0 2px 8px oklch(0.18 0 0 / 0.08);
+      animation: fadeIn 0.12s ease;
+    }
+    .col-color-swatch {
+      width: 22px;
+      height: 22px;
+      border: 2px solid transparent;
+      border-radius: 50%;
+      cursor: pointer;
+      padding: 0;
+    }
+    .col-color-swatch.active {
+      border-color: var(--text);
+      box-shadow: 0 0 0 2px var(--card-bg);
+    }
+    .col-color-swatch:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .col-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.15px;
+      color: var(--text);
+      flex: 1;
+      cursor: text;
+      padding: 2px 4px;
+      margin: -2px -4px;
+      border-radius: 5px;
+      transition: background 0.12s;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .col-title:hover { background: oklch(0.88 0.007 72 / 0.6); }
+    .dark .col-title:hover { background: oklch(0.27 0.014 65); }
+    .col-rename-input {
+      flex: 1;
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: 0.15px;
+      color: var(--text);
+      border: 1.5px solid var(--accent);
+      border-radius: 6px;
+      padding: 2px 6px;
+      background: var(--card-bg);
+      outline: none;
+      width: 100%;
+      min-width: 0;
+    }
+    .col-count {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-3);
+      background: oklch(0.88 0.007 72);
+      border-radius: 20px;
+      padding: 2px 8px;
+      min-width: 22px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .dark .col-count { background: oklch(0.27 0.013 65); }
+    .col-delete {
+      width: 24px; height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      color: var(--text-3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.13s, background 0.12s, color 0.12s;
+      flex-shrink: 0;
+    }
+    .column:hover .col-delete { opacity: 0.85; }
+    .col-delete:hover { background: var(--danger-bg); color: var(--danger); opacity: 1; }
+    .col-delete:focus-visible { outline: 2px solid var(--danger); outline-offset: 1px; opacity: 1; }
+
+    /* ── Add column tile ── */
+    .col-add-btn {
+      flex-shrink: 0;
+      align-self: flex-start;
+      width: 220px;
+      padding: 12px 16px;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--r-col);
+      color: var(--text-3);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.13s, color 0.13s, border-color 0.13s;
+    }
+    .col-add-btn:hover { background: var(--col-bg); color: var(--text-2); border-color: var(--text-3); }
+    .col-add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Cards area ── */
+    .cards-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2px 10px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-height: 48px;
+    }
+    .cards-area::-webkit-scrollbar { width: 3px; }
+    .cards-area::-webkit-scrollbar-track { background: transparent; }
+    .cards-area::-webkit-scrollbar-thumb { background: oklch(0.83 0.007 72); border-radius: 3px; }
+
+    /* ── Drop placeholder ── */
+    .drop-placeholder {
+      flex-shrink: 0;
+      height: 66px;
+      border: 2px dashed oklch(0.72 0.09 245);
+      border-radius: var(--r-card);
+      background: oklch(0.94 0.040 245);
+      transition: all 0.15s ease;
+      animation: placeholderIn 0.14s ease;
+    }
+    @keyframes placeholderIn {
+      from { opacity: 0; transform: scaleY(0.6); }
+      to   { opacity: 1; transform: scaleY(1); }
+    }
+
+    /* ── Card ── */
+    .card {
+      flex-shrink: 0;
+      background: var(--card-bg);
+      border-radius: var(--r-card);
+      padding: 13px 15px;
+      box-shadow: 0 1px 2px oklch(0.2 0 0 / 0.06), 0 1px 5px oklch(0.2 0 0 / 0.04);
+      border: 1px solid oklch(0.91 0.004 72);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+      user-select: none;
+      touch-action: none;
+    }
+    .dark .card { border-color: oklch(0.28 0.013 65); }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px oklch(0.2 0 0 / 0.10), 0 1px 4px oklch(0.2 0 0 / 0.06);
+    }
+    .card.is-dragging {
+      opacity: 0.32;
+    }
+    .card.is-dragging:hover {
+      transform: none;
+    }
+    .card-drag-ghost {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0.96;
+      transform: rotate(2.5deg) scale(1.04);
+      box-shadow: 0 12px 36px oklch(0.2 0 0 / 0.22);
+      cursor: grabbing;
+    }
+    body.card-pointer-dragging {
+      cursor: grabbing;
+      user-select: none;
+    }
+    .card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .card-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 7px;
+    }
+    .card-title {
+      font-size: 13.5px;
+      font-weight: 500;
+      line-height: 1.48;
+      color: var(--text);
+      text-wrap: pretty;
+    }
+    .card-title-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .card-title-row .card-title {
+      flex: 1;
+      min-width: 0;
+    }
+    .card-title-row .ck-box {
+      margin-top: 2px;
+    }
+    .card-notes {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 5px;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .card a, .modal a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .card a:hover, .modal a:hover { color: var(--accent-h); }
+    .card-meta {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .due-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: fit-content;
+      padding: 2px 7px 2px 5px;
+      border-radius: 5px;
+      background: oklch(0.92 0.005 72);
+      color: var(--text-3);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .dark .due-pill { background: oklch(0.27 0.013 65); }
+    .due-pill.overdue { color: var(--danger); background: var(--danger-bg); }
+    .due-pill.today { color: oklch(0.50 0.13 70); background: oklch(0.94 0.06 85); }
+    .dark .due-pill.today { color: oklch(0.78 0.13 85); background: oklch(0.28 0.04 85); }
+    .due-pill.complete { color: var(--green); background: oklch(0.93 0.05 150); }
+    .dark .due-pill.complete { background: oklch(0.27 0.04 150); }
+    .icon-btn {
+      width: 28px; height: 28px;
+      border: none;
+      background: oklch(0.91 0.007 72);
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-2);
+      transition: background 0.12s, color 0.12s;
+    }
+    .dark .icon-btn { background: oklch(0.28 0.013 65); }
+    .icon-btn:hover { background: oklch(0.86 0.009 72); color: var(--text); }
+    .dark .icon-btn:hover { background: oklch(0.32 0.014 65); }
+    .icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    /* ── Labels (pills) ── */
+    .label-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: white;
+      line-height: 1.5;
+      text-shadow: 0 1px 0 oklch(0.2 0 0 / 0.18);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .label-pill.btn {
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      font: inherit;
+      font-size: 11.5px;
+      padding: 4px 11px;
+      transition: opacity 0.12s, transform 0.1s, box-shadow 0.12s;
+    }
+    .label-pill.btn.off {
+      opacity: 0.32;
+      filter: saturate(0.6);
+    }
+    .label-pill.btn:hover { transform: translateY(-1px); }
+    .label-pill.btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); }
+    .label-pill.filter-active {
+      box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px currentColor;
+    }
+    .label-pill .x {
+      font-size: 10px;
+      opacity: 0.85;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    /* card pill (the small one on cards) acts as a filter button */
+    .card .label-pill {
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: transform 0.1s, box-shadow 0.12s;
+    }
+    .card .label-pill:hover { transform: translateY(-1px); }
+    .card .label-pill.filter-active {
+      box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 3.5px currentColor;
+    }
+
+    /* ── Checklist on card ── */
+    .ck-mini {
+      margin-top: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .ck-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
+    .ck-row .ck-text { flex: 1; word-break: break-word; }
+    .ck-row.done .ck-text { text-decoration: line-through; color: var(--text-3); }
+    .ck-more {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 1px;
+      padding-left: 23px;
+    }
+    .ck-progress {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      margin-top: 8px;
+      padding: 2px 7px 2px 5px;
+      border-radius: 5px;
+      background: oklch(0.92 0.005 72);
+      width: fit-content;
+    }
+    .dark .ck-progress { background: oklch(0.27 0.013 65); }
+    .ck-progress.complete { color: var(--green); background: oklch(0.93 0.05 150); }
+    .dark .ck-progress.complete { background: oklch(0.27 0.04 150); }
+    .ck-box {
+      width: 16px; height: 16px;
+      flex-shrink: 0;
+      border: 1.5px solid var(--text-3);
+      border-radius: 4px;
+      background: var(--card-bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, border-color 0.12s;
+      padding: 0;
+      margin-top: 1px;
+    }
+    .ck-box:hover { border-color: var(--accent); }
+    .ck-box:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .ck-box.done {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+    .ck-box svg { display: block; }
+
+    /* ── Add card ── */
+    .add-btn {
+      margin: 6px 10px 10px;
+      padding: 10px 14px;
+      background: none;
+      border: 1.5px dashed oklch(0.83 0.008 72);
+      border-radius: 9px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text-3);
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.13s, border-color 0.13s, color 0.13s;
+      flex-shrink: 0;
+    }
+    .dark .add-btn { border-color: var(--border); }
+    .add-btn:hover { background: oklch(0.90 0.009 72); border-color: oklch(0.76 0.009 72); color: var(--text-2); }
+    .dark .add-btn:hover { background: oklch(0.25 0.014 65); }
+    .add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* ── Add card form ── */
+    .add-form {
+      margin: 2px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+    .field-input {
+      font: inherit;
+      font-size: 13.5px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: var(--card-bg);
+      color: var(--text);
+      width: 100%;
+      transition: border-color 0.13s;
+      resize: none;
+      color-scheme: inherit;
+    }
+    .field-input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.72;
+    }
+    .dark .field-input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(1.25);
+      opacity: 0.82;
+    }
+    .field-input::placeholder { color: var(--text-3); }
+    .field-input:focus { outline: none; border-color: var(--accent); }
+    .field-input.done { text-decoration: line-through; color: var(--text-3); }
+    .field-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .field-row .field-input {
+      flex: 1;
+      min-width: 0;
+    }
+    .due-field-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .due-field-row .field-input {
+      width: 180px;
+    }
+    .notes-preview {
+      min-height: 88px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      background: var(--card-bg);
+      color: var(--text);
+      font-size: 13.5px;
+      line-height: 1.55;
+      cursor: text;
+      overflow-wrap: anywhere;
+    }
+    .notes-preview:hover {
+      border-color: var(--text-3);
+    }
+    .notes-preview:focus-visible {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .notes-preview.empty {
+      color: var(--text-3);
+    }
+    .notes-input {
+      min-height: 120px;
+      field-sizing: content;
+    }
+    .attachments {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .attach-drop {
+      min-height: 48px;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: var(--card-bg);
+      color: var(--text-3);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: border-color 0.13s, background 0.13s, color 0.13s;
+    }
+    .attach-drop.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+      color: var(--text);
+    }
+    .attachment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .attachment-row {
+      display: grid;
+      grid-template-columns: 54px 1fr auto auto;
+      gap: 9px;
+      align-items: center;
+      border: 1px solid var(--border-2);
+      border-radius: 8px;
+      padding: 7px;
+      background: var(--card-bg);
+    }
+    .attachment-thumb {
+      width: 54px;
+      height: 42px;
+      border-radius: 6px;
+      background: var(--col-bg);
+      color: var(--text-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .attachment-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .attachment-name {
+      min-width: 0;
+      color: var(--text);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .attachment-meta {
+      color: var(--text-3);
+      font-size: 11.5px;
+      margin-top: 2px;
+    }
+    .attachment-action {
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .attachment-action:hover {
+      background: var(--col-bg);
+      color: var(--text);
+    }
+    .attachment-action.danger:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+    .form-actions {
+      display: flex;
+      gap: 7px;
+    }
+    .btn-primary {
+      height: 34px;
+      padding: 0 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .btn-ghost-sm {
+      height: 34px;
+      padding: 0 13px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-ghost-sm:hover { background: oklch(0.90 0.007 72); }
+    .dark .btn-ghost-sm:hover { background: oklch(0.26 0.013 65); }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: oklch(0.18 0 0 / 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(3px);
+      animation: fadeIn 0.15s ease;
+      padding: 24px;
+    }
+    .modal {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 26px 28px 24px;
+      width: 560px;
+      max-width: 100%;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      box-shadow: 0 24px 64px oklch(0.18 0 0 / 0.22), 0 2px 8px oklch(0.18 0 0 / 0.08);
+      animation: slideUp 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .modal::-webkit-scrollbar { width: 4px; }
+    .modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .modal-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-hd-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+    .modal-close {
+      width: 30px; height: 30px;
+      border: none;
+      background: oklch(0.92 0.007 72);
+      border-radius: 7px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-2);
+      font-size: 16px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .dark .modal-close { background: oklch(0.28 0.013 65); }
+    .modal-close:hover { background: oklch(0.87 0.009 72); color: var(--text); }
+    .dark .modal-close:hover { background: oklch(0.32 0.014 65); }
+    .modal-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .field-label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 6px;
+    }
+    .label-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .ck-edit {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .ck-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: relative;
+    }
+    .ck-edit-row.dragging {
+      opacity: 0.35;
+    }
+    .ck-edit-row.drop-before::before,
+    .ck-edit-row.drop-after::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 36px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+    .ck-edit-row.drop-before::before { top: -5px; }
+    .ck-edit-row.drop-after::after { bottom: -5px; }
+    .ck-drag-handle {
+      width: 20px;
+      height: 28px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-3);
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 0;
+      touch-action: none;
+    }
+    .ck-drag-handle:hover {
+      background: var(--col-bg);
+      color: var(--text-2);
+    }
+    .ck-drag-handle:active { cursor: grabbing; }
+    .ck-drag-handle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .ck-edit-row .field-input {
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+    .ck-remove {
+      width: 28px; height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-3);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 15px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .ck-remove:hover { background: var(--danger-bg); color: var(--danger); }
+    .ck-remove:focus-visible { outline: 2px solid var(--danger); outline-offset: 1px; }
+    .ck-add {
+      align-self: flex-start;
+      padding: 7px 12px;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+      color: var(--text-2);
+      font: inherit;
+      font-size: 12.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .ck-add:hover {
+      background: var(--col-bg);
+      color: var(--text);
+      border-color: var(--text-3);
+    }
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 2px;
+    }
+    .btn-danger {
+      height: 34px;
+      padding: 0 14px;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 13px;
+      color: var(--danger);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .btn-danger:hover { background: var(--danger-bg); }
+    .btn-danger:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
+    .modal-footer-right { display: flex; gap: 9px; align-items: center; }
+    .col-pill {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 20px;
+      color: white;
+      opacity: 0.88;
+      text-shadow: 0 1px 0 oklch(0.2 0 0 / 0.18);
+    }
+
+    /* ── Label manager ── */
+    .lab-mgr-list {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      max-height: 50vh;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .lab-mgr-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      position: relative;
+    }
+    .lab-mgr-row.dragging {
+      opacity: 0.35;
+    }
+    .lab-mgr-row.drop-before::before,
+    .lab-mgr-row.drop-after::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 36px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+    .lab-mgr-row.drop-before::before { top: 0; }
+    .lab-mgr-row.drop-after::after { bottom: 0; }
+    .lab-mgr-row .ck-drag-handle {
+      height: 36px;
+    }
+    .lab-mgr-color {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .lab-mgr-color::-webkit-color-swatch-wrapper { padding: 3px; }
+    .lab-mgr-color::-webkit-color-swatch { border: none; border-radius: 5px; }
+    .lab-mgr-color::-moz-color-swatch { border: none; border-radius: 5px; }
+    .lab-mgr-hex {
+      width: 96px;
+      flex-shrink: 0;
+      font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+      font-size: 12.5px;
+      text-transform: uppercase;
+    }
+    .lab-mgr-hex.invalid { border-color: var(--danger); }
+    .lab-mgr-name {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* ── Theme toggle ── */
+    .theme-toggle {
+      position: relative;
+      width: 54px;
+      height: 30px;
+      border-radius: 15px;
+      background: var(--col-bg);
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.35s ease, border-color 0.35s ease;
+      outline: none;
+    }
+    .theme-toggle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 7px;
+      pointer-events: none;
+    }
+    .toggle-icon {
+      width: 13px; height: 13px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-3);
+      transition: color 0.3s, opacity 0.3s;
+    }
+    .toggle-icon.active { color: var(--text-2); }
+    .toggle-knob {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      box-shadow: 0 1px 4px oklch(0.1 0 0 / 0.18);
+      transition: transform 0.32s cubic-bezier(0.34, 1.42, 0.64, 1),
+                  background 0.35s ease;
+      pointer-events: none;
+    }
+    .dark .toggle-knob {
+      transform: translateX(24px);
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to   { opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } = React;
+
+    /* ─── Defaults ─── */
+    const DEFAULT_COLUMNS = [
+      { id: 'backlog', label: 'Backlog', color: 'oklch(0.68 0.06 260)' },
+      { id: 'todo',    label: 'Todo',    color: 'oklch(0.62 0.13 235)' },
+      { id: 'doing',   label: 'Doing',   color: 'oklch(0.70 0.13 52)'  },
+      { id: 'done',    label: 'Done',    color: 'oklch(0.60 0.15 150)' },
+    ];
+
+    const COL_PALETTE = [
+      'oklch(0.68 0.06 260)',
+      'oklch(0.62 0.13 235)',
+      'oklch(0.70 0.13 52)',
+      'oklch(0.60 0.15 150)',
+      'oklch(0.66 0.18 25)',
+      'oklch(0.62 0.18 300)',
+      'oklch(0.78 0.14 95)',
+    ];
+
+    const DEFAULT_LABELS = [
+      { id: 'lab-red',    name: 'Urgent',  color: 'oklch(0.62 0.18 28)'  },
+      { id: 'lab-orange', name: 'Idea',    color: 'oklch(0.70 0.16 55)'  },
+      { id: 'lab-yellow', name: 'Review',  color: 'oklch(0.78 0.14 95)'  },
+      { id: 'lab-green',  name: 'Ready',   color: 'oklch(0.62 0.16 150)' },
+      { id: 'lab-blue',   name: 'Tech',    color: 'oklch(0.60 0.14 240)' },
+      { id: 'lab-purple', name: 'Design',  color: 'oklch(0.58 0.18 305)' },
+    ];
+
+    const STORAGE = 'kb-v2';
+    const LEGACY  = 'kb-v1';
+    const BACKUP_META = 'kb-backup-meta';
+    const JSON_PICKER_ID = 'kanban-json';
+    const BACKUP_PICKER_ID = 'kanban-backup';
+    const BACKUP_DIR_PICKER_ID = 'kanban-backup-dir';
+    const JSON_FILE_TYPES = [{ description: 'Kanban JSON', accept: { 'application/json': ['.json'] } }];
+    const URL_RE  = /((?:https?|file):\/\/[^\s<>"']+)/g;
+    const HEX_RE  = /^#[0-9A-Fa-f]{6}$/;
+
+    let _id = 0;
+    const uid = (p='c') => `${p}_${Date.now().toString(36)}_${(++_id).toString(36)}_${Math.random().toString(36).slice(2,6)}`;
+
+    /* ─── Color → hex (canvas trick — accepts oklch, rgb, hex, names) ─── */
+    let _hexCtx = null;
+    const clamp01 = (n) => Math.min(1, Math.max(0, n));
+    const byteToHex = (n) => Math.round(clamp01(n) * 255).toString(16).padStart(2, '0');
+    const srgbTransfer = (n) => n <= 0.0031308 ? 12.92 * n : 1.055 * Math.pow(n, 1 / 2.4) - 0.055;
+
+    function oklchToHex(c) {
+      const m = String(c).trim().match(/^oklch\(\s*([0-9.]+%?)\s+([0-9.]+)\s+(-?[0-9.]+)(deg|rad|turn)?(?:\s*\/\s*[0-9.]+%?)?\s*\)$/i);
+      if (!m) return null;
+
+      const L = m[1].endsWith('%') ? parseFloat(m[1]) / 100 : parseFloat(m[1]);
+      const C = parseFloat(m[2]);
+      let h = parseFloat(m[3]);
+      if (m[4] === 'rad') h = h * 180 / Math.PI;
+      if (m[4] === 'turn') h = h * 360;
+
+      const hr = h * Math.PI / 180;
+      const a = C * Math.cos(hr);
+      const b = C * Math.sin(hr);
+
+      const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+      const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+      const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+      const l = l_ * l_ * l_;
+      const mm = m_ * m_ * m_;
+      const s = s_ * s_ * s_;
+
+      const r = srgbTransfer( 4.0767416621 * l - 3.3077115913 * mm + 0.2309699292 * s);
+      const g = srgbTransfer(-1.2684380046 * l + 2.6097574011 * mm - 0.3413193965 * s);
+      const bl = srgbTransfer(-0.0041960863 * l - 0.7034186147 * mm + 1.7076147010 * s);
+
+      return `#${byteToHex(r)}${byteToHex(g)}${byteToHex(bl)}`;
+    }
+
+    function colorToHex(c) {
+      if (!c) return '#888888';
+      if (HEX_RE.test(c)) return c.toLowerCase();
+      const oklch = oklchToHex(c);
+      if (oklch) return oklch;
+      try {
+        if (!_hexCtx) _hexCtx = document.createElement('canvas').getContext('2d');
+        _hexCtx.fillStyle = '#000000';
+        _hexCtx.fillStyle = c;
+        const v = _hexCtx.fillStyle;
+        if (typeof v === 'string' && v.startsWith('#')) {
+          if (v.length === 4) return ('#' + v[1]+v[1] + v[2]+v[2] + v[3]+v[3]).toLowerCase();
+          return v.length > 7 ? v.slice(0, 7).toLowerCase() : v.toLowerCase();
+        }
+      } catch {}
+      return '#888888';
+    }
+
+    /* ─── Linkify ─── */
+    function linkify(text) {
+      if (!text) return null;
+      const out = [];
+      let last = 0, m;
+      URL_RE.lastIndex = 0;
+      while ((m = URL_RE.exec(text)) !== null) {
+        if (m.index > last) out.push(text.slice(last, m.index));
+        out.push(
+          <a key={`u${m.index}`}
+             href={m[0]}
+             target="_blank"
+             rel="noopener noreferrer"
+             className="no-drag"
+             draggable={false}
+             onClick={e => e.stopPropagation()}
+             onMouseDown={e => e.stopPropagation()}
+             onKeyDown={e => e.stopPropagation()}>{m[0]}</a>
+        );
+        last = m.index + m[0].length;
+      }
+      if (last < text.length) out.push(text.slice(last));
+      return out;
+    }
+
+    /* ─── Seed ─── */
+    function formatNotes(text) {
+      if (!text) return null;
+      return text.split('\n').map((line, idx, arr) => (
+        <React.Fragment key={idx}>
+          {line ? linkify(line) : '\u00a0'}
+          {idx < arr.length - 1 && <br />}
+        </React.Fragment>
+      ));
+    }
+
+    function todayISO() {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    }
+
+    function dueStatus(card) {
+      if (!card?.due) return null;
+      if (card.complete) return 'complete';
+      const today = todayISO();
+      if (card.due < today) return 'overdue';
+      if (card.due === today) return 'today';
+      return 'future';
+    }
+
+    function formatDueDate(date) {
+      if (!date) return '';
+      const [y, m, d] = date.split('-').map(Number);
+      if (!y || !m || !d) return date;
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return '';
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let value = bytes;
+      let unit = 0;
+      while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit++;
+      }
+      return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+    }
+
+    function makeSeed() {
+      return {
+        version: 2,
+        title: 'Kanban',
+        columns: DEFAULT_COLUMNS.map(c => ({ ...c })),
+        labels:  DEFAULT_LABELS.map(l => ({ ...l })),
+        cards: {
+          backlog: [
+            { id: uid(), title: 'Research OKLCH color model', notes: 'Better perceptual uniformity than HSL — use for design tokens', labels: ['lab-blue'], checklist: [] },
+            { id: uid(), title: 'Try the new label palette',   notes: 'Click any pill on a card to filter the board.\nhttps://oklch.com/', labels: ['lab-purple','lab-orange'], checklist: [] },
+            { id: uid(), title: 'Write README',                notes: 'Include Windows setup and keyboard shortcut reference', labels: [], checklist: [
+              { id: uid('ck'), text: 'Document keyboard shortcuts', done: false },
+              { id: uid('ck'), text: 'Explain JSON import / export', done: false },
+              { id: uid('ck'), text: 'Add screenshots',              done: false },
+            ] },
+          ],
+          todo: [
+            { id: uid(), title: 'Design edit card modal', notes: 'Title, labels, notes, checklist — keep it simple', labels: ['lab-purple'], checklist: [] },
+            { id: uid(), title: 'JSON import / export',   notes: 'File picker works on Windows. Tested OK.', labels: ['lab-blue'], checklist: [
+              { id: uid('ck'), text: 'Export current board', done: true },
+              { id: uid('ck'), text: 'Import a saved board', done: true },
+            ] },
+          ],
+          doing: [
+            { id: uid(), title: 'Build Kanban prototype', notes: 'React + local HTML — tactile drag feel is the priority', labels: ['lab-orange'], checklist: [
+              { id: uid('ck'), text: 'Drag cards between columns', done: true },
+              { id: uid('ck'), text: 'Add labels',                  done: true },
+              { id: uid('ck'), text: 'Add checklists',              done: true },
+              { id: uid('ck'), text: 'Add column reordering',       done: true },
+              { id: uid('ck'), text: 'Add label filtering',         done: true },
+              { id: uid('ck'), text: 'Polish empty states',         done: false },
+            ] },
+            { id: uid(), title: 'Autosave debounce', notes: 'Saved indicator pulses for ~2s after each change.', labels: ['lab-green'], checklist: [] },
+          ],
+          done: [
+            { id: uid(), title: 'Define requirements', notes: 'Local-only, no cloud, no accounts', labels: ['lab-green'], checklist: [] },
+            { id: uid(), title: 'Choose tech stack',   notes: 'Single HTML file with React via CDN.', labels: ['lab-blue'], checklist: [] },
+          ],
+        },
+      };
+    }
+
+    /* ─── Migration / load / save ─── */
+    function makeBlankBoard(title = 'Kanban') {
+      const cards = {};
+      DEFAULT_COLUMNS.forEach(c => { cards[c.id] = []; });
+      return {
+        version: 2,
+        title,
+        columns: DEFAULT_COLUMNS.map(c => ({ ...c })),
+        labels: DEFAULT_LABELS.map(l => ({ ...l })),
+        cards,
+      };
+    }
+
+    function migrate(raw) {
+      if (!raw || typeof raw !== 'object') return makeSeed();
+      if (raw.version === 2 && raw.columns && raw.cards) {
+        const cards = {};
+        raw.columns.forEach(col => {
+          const list = Array.isArray(raw.cards[col.id]) ? raw.cards[col.id] : [];
+          cards[col.id] = list.map(c => ({
+            id: c.id || uid(),
+            title: c.title || '',
+            notes: c.notes || '',
+            labels: Array.isArray(c.labels) ? c.labels : [],
+            due: typeof c.due === 'string' ? c.due : '',
+            complete: !!c.complete,
+            attachments: Array.isArray(c.attachments)
+              ? c.attachments.map(a => ({
+                  id: a.id || uid('att'),
+                  name: a.name || 'Attachment',
+                  type: a.type || '',
+                  size: Number.isFinite(a.size) ? a.size : 0,
+                  lastModified: Number.isFinite(a.lastModified) ? a.lastModified : 0,
+                  hasHandle: !!a.hasHandle,
+                }))
+              : [],
+            checklist: Array.isArray(c.checklist)
+              ? c.checklist.map(it => ({ id: it.id || uid('ck'), text: it.text || '', done: !!it.done }))
+              : [],
+          }));
+        });
+        return {
+          version: 2,
+          title: typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : 'Kanban',
+          columns: raw.columns.map(c => ({ id: c.id, label: c.label, color: c.color || COL_PALETTE[0] })),
+          labels: Array.isArray(raw.labels) && raw.labels.length ? raw.labels : DEFAULT_LABELS.map(l => ({ ...l })),
+          cards,
+        };
+      }
+      // legacy v1
+      const cards = {};
+      DEFAULT_COLUMNS.forEach(c => {
+        cards[c.id] = (Array.isArray(raw[c.id]) ? raw[c.id] : []).map(card => ({
+          id: card.id || uid(),
+          title: card.title || '',
+          notes: card.notes || '',
+          labels: [],
+          due: '',
+          complete: false,
+          attachments: [],
+          checklist: [],
+        }));
+      });
+      return {
+        version: 2,
+        title: 'Kanban',
+        columns: DEFAULT_COLUMNS.map(c => ({ ...c })),
+        labels: DEFAULT_LABELS.map(l => ({ ...l })),
+        cards,
+      };
+    }
+
+    function loadBoard() {
+      try {
+        const v2 = localStorage.getItem(STORAGE);
+        if (v2) return migrate(JSON.parse(v2));
+        const v1 = localStorage.getItem(LEGACY);
+        if (v1) return migrate(JSON.parse(v1));
+      } catch {}
+      return makeSeed();
+    }
+
+    function saveBoard(b) {
+      try { localStorage.setItem(STORAGE, JSON.stringify(b)); } catch {}
+    }
+
+    function loadBackupMeta() {
+      try {
+        return JSON.parse(localStorage.getItem(BACKUP_META)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveBackupMeta(meta) {
+      try { localStorage.setItem(BACKUP_META, JSON.stringify(meta)); } catch {}
+    }
+
+    function clearBackupMeta() {
+      try { localStorage.removeItem(BACKUP_META); } catch {}
+    }
+
+    const supportsFileBackups = () =>
+      'showSaveFilePicker' in window && 'showDirectoryPicker' in window;
+
+    const jsonFileName = (title, suffix = '') => {
+      const slug = (title || 'kanban').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kanban';
+      return `${slug}${suffix}.json`;
+    };
+
+    const datedJsonFileName = (title) => {
+      const slug = (title || 'kanban').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'kanban';
+      const ts = new Date().toISOString().slice(0, 10);
+      return `${slug}-${ts}.json`;
+    };
+
+    function openBackupDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('kanban-backup-db', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('handles');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbGet(key) {
+      const db = await openBackupDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('handles', 'readonly');
+        const req = tx.objectStore('handles').get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
+    async function idbSet(key, value) {
+      const db = await openBackupDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(value, key);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function idbDelete(key) {
+      const db = await openBackupDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').delete(key);
+        tx.oncomplete = () => { db.close(); resolve(); };
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function verifyWritePermission(handle, ask = false) {
+      if (!handle) return false;
+      const opts = { mode: 'readwrite' };
+      if ((await handle.queryPermission?.(opts)) === 'granted') return true;
+      if (ask && (await handle.requestPermission?.(opts)) === 'granted') return true;
+      return false;
+    }
+
+    /* ─── App ─── */
+    function App() {
+      const [board, setBoard]       = useState(loadBoard);
+      const [modal, setModal]       = useState(null);
+      const [addingTo, setAddingTo] = useState(null);
+      const [saveFx, setSaveFx]     = useState(false);
+      const [dark, setDark]         = useState(() => localStorage.getItem('kb-theme') === 'dark');
+      const [filterIds, setFilterIds] = useState([]);          // active label-id filters (OR)
+      const [labelMgrOpen, setLabelMgrOpen] = useState(false);
+      const [nextDueSortDir, setNextDueSortDir] = useState('asc');
+      const [backupStatus, setBackupStatus] = useState(() => {
+        if (!supportsFileBackups()) return { kind: 'unsupported', text: 'manual export' };
+        const meta = loadBackupMeta();
+        return meta.fileName ? { kind: 'linked', text: meta.fileName } : { kind: 'idle', text: 'no backup' };
+      });
+
+      const [draggingId, setDraggingId] = useState(null);
+      const [dropTarget, setDropTarget] = useState(null);
+      const [pointerDrag, setPointerDrag] = useState(null);
+      const [draggingCol, setDraggingCol] = useState(null);
+      const [colDropTarget, setColDropTarget] = useState(null);
+
+      const dragRef    = useRef(null);
+      const pointerDragRef = useRef(null);
+      const dropTargetRef = useRef(null);
+      const colDragRef = useRef(null);
+      const saveTimer  = useRef(null);
+      const backupTimer = useRef(null);
+      const backupFileRef = useRef(null);
+      const backupDirRef = useRef(null);
+      const storedBackupRef = useRef(null);
+      const backupPickerHandleRef = useRef(null);
+      const backupDirPickerHandleRef = useRef(null);
+      const jsonPickerHandleRef = useRef(null);
+      const boardRef   = useRef(board);
+
+      useEffect(() => { boardRef.current = board; }, [board]);
+      useLayoutEffect(() => {
+        document.documentElement.classList.toggle('dark', dark);
+        localStorage.setItem('kb-theme', dark ? 'dark' : 'light');
+      }, [dark]);
+      useEffect(() => {
+        document.title = board.title || 'Kanban';
+      }, [board.title]);
+
+      useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          try {
+            const handle = await idbGet('jsonPicker');
+            if (!cancelled) jsonPickerHandleRef.current = handle || null;
+          } catch (err) {
+            console.warn('Could not restore JSON picker location', err);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
+      useEffect(() => {
+        let cancelled = false;
+        (async () => {
+          try {
+            const saved = await idbGet('backupPicker');
+            const savedDir = await idbGet('backupDirPicker');
+            if (cancelled) return;
+            backupPickerHandleRef.current = saved || null;
+            backupDirPickerHandleRef.current = savedDir || null;
+          } catch (err) {
+            console.warn('Could not restore backup picker location', err);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
+      useEffect(() => {
+        if (!supportsFileBackups()) return;
+        let cancelled = false;
+        (async () => {
+          try {
+            const saved = await idbGet('backup');
+            if (cancelled) return;
+            if (!saved?.fileHandle) {
+              setBackupStatus({ kind: 'idle', text: 'no backup' });
+              return;
+            }
+            storedBackupRef.current = saved;
+            const fileOk = await verifyWritePermission(saved.fileHandle, false);
+            const dirOk = saved.dirHandle ? await verifyWritePermission(saved.dirHandle, false) : false;
+            if (fileOk) {
+              backupFileRef.current = saved.fileHandle;
+              backupDirRef.current = dirOk ? saved.dirHandle : null;
+              backupPickerHandleRef.current = saved.fileHandle;
+              if (dirOk) backupDirPickerHandleRef.current = saved.dirHandle;
+              setBackupStatus({ kind: 'linked', text: saved.fileHandle.name || 'backup linked' });
+              scheduleBackup(boardRef.current);
+            } else {
+              setBackupStatus({ kind: 'idle', text: 'reconnect backup' });
+            }
+          } catch (err) {
+            console.warn('Could not restore backup handle', err);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, []);
+
+      // prune filter ids if the labels they reference no longer exist
+      useEffect(() => {
+        const valid = new Set(board.labels.map(l => l.id));
+        setFilterIds(ids => ids.filter(id => valid.has(id)));
+      }, [board.labels]);
+
+      const commit = useCallback((updater) => {
+        setBoard(prev => {
+          const next = typeof updater === 'function' ? updater(prev) : updater;
+          saveBoard(next);
+          scheduleBackup(next);
+          setSaveFx(true);
+          clearTimeout(saveTimer.current);
+          saveTimer.current = setTimeout(() => setSaveFx(false), 1900);
+          return next;
+        });
+      }, []);
+
+      const writeFile = async (handle, text) => {
+        const writable = await handle.createWritable();
+        await writable.write(text);
+        await writable.close();
+      };
+
+      const writeBackup = async (nextBoard, manual = false) => {
+        if (!backupFileRef.current) {
+          if (manual) setBackupStatus({ kind: 'idle', text: 'choose backup' });
+          return;
+        }
+
+        setBackupStatus({ kind: 'saving', text: 'saving...' });
+        try {
+          const json = JSON.stringify(nextBoard, null, 2);
+          if (backupDirRef.current) {
+            try {
+              const previousHandle = await backupDirRef.current.getFileHandle(
+                jsonFileName(nextBoard.title, '.previous'),
+                { create: true }
+              );
+              let previousText = null;
+              try { previousText = await (await backupFileRef.current.getFile()).text(); } catch {}
+              if (previousText) await writeFile(previousHandle, previousText);
+            } catch {}
+          }
+          await writeFile(backupFileRef.current, json);
+          setBackupStatus({ kind: 'saved', text: 'backup saved' });
+          setTimeout(() => {
+            if (backupFileRef.current) {
+              setBackupStatus({ kind: 'linked', text: loadBackupMeta().fileName || 'backup linked' });
+            }
+          }, 1800);
+        } catch (err) {
+          setBackupStatus({ kind: 'error', text: 'backup failed' });
+          console.warn('Kanban backup failed', err);
+        }
+      };
+
+      const scheduleBackup = (nextBoard) => {
+        if (!backupFileRef.current) return;
+        clearTimeout(backupTimer.current);
+        backupTimer.current = setTimeout(() => writeBackup(nextBoard), 700);
+      };
+
+      const chooseBackupFile = async () => {
+        if (!supportsFileBackups()) {
+          alert('Auto backup needs Chrome or Edge with the File System Access API. Export still works everywhere.');
+          return;
+        }
+        try {
+          if (storedBackupRef.current?.fileHandle) {
+            const fileOk = await verifyWritePermission(storedBackupRef.current.fileHandle, true);
+            const dirOk = storedBackupRef.current.dirHandle
+              ? await verifyWritePermission(storedBackupRef.current.dirHandle, true)
+              : false;
+            if (fileOk) {
+              backupFileRef.current = storedBackupRef.current.fileHandle;
+              backupDirRef.current = dirOk ? storedBackupRef.current.dirHandle : null;
+              setBackupStatus({ kind: 'linked', text: backupFileRef.current.name || 'backup linked' });
+              await writeBackup(boardRef.current, true);
+              return;
+            }
+          }
+
+          const fileName = jsonFileName(boardRef.current.title);
+          const backupStartIn = backupPickerHandleRef.current || jsonPickerHandleRef.current;
+          const fileHandle = await window.showSaveFilePicker({
+            id: BACKUP_PICKER_ID,
+            ...(backupStartIn ? { startIn: backupStartIn } : {}),
+            suggestedName: fileName,
+            types: JSON_FILE_TYPES,
+          });
+          backupPickerHandleRef.current = fileHandle;
+          idbSet('backupPicker', fileHandle).catch(err => console.warn('Could not remember backup picker location', err));
+          let dirHandle = null;
+          try {
+            const dirStartIn = backupDirPickerHandleRef.current || fileHandle;
+            dirHandle = await window.showDirectoryPicker({
+              id: BACKUP_DIR_PICKER_ID,
+              mode: 'readwrite',
+              ...(dirStartIn ? { startIn: dirStartIn } : {}),
+            });
+            backupDirPickerHandleRef.current = dirHandle;
+            idbSet('backupDirPicker', dirHandle).catch(err => console.warn('Could not remember backup folder picker location', err));
+          } catch {}
+          backupFileRef.current = fileHandle;
+          backupDirRef.current = dirHandle;
+          storedBackupRef.current = { fileHandle, dirHandle };
+          await idbSet('backup', { fileHandle, dirHandle });
+          saveBackupMeta({ fileName: fileHandle.name || fileName });
+          setBackupStatus({ kind: 'linked', text: fileHandle.name || fileName });
+          await writeBackup(boardRef.current, true);
+        } catch (err) {
+          if (err?.name !== 'AbortError') {
+            setBackupStatus({ kind: 'error', text: 'backup failed' });
+            console.warn('Backup picker failed', err);
+          }
+        }
+      };
+
+      /* ── Filter ── */
+      const toggleFilter = useCallback((labelId) => {
+        setFilterIds(ids => ids.includes(labelId) ? ids.filter(i => i !== labelId) : [...ids, labelId]);
+      }, []);
+      const clearFilter = () => setFilterIds([]);
+
+      const sortCardsByDue = () => {
+        const dir = nextDueSortDir;
+        setNextDueSortDir(dir === 'asc' ? 'desc' : 'asc');
+        commit(prev => {
+          const cards = { ...prev.cards };
+          prev.columns.forEach(col => {
+            cards[col.id] = [...(prev.cards[col.id] || [])]
+              .map((card, idx) => ({ card, idx }))
+              .sort((a, b) => {
+                const ad = a.card.due || '';
+                const bd = b.card.due || '';
+                if (ad && bd) {
+                  const cmp = ad.localeCompare(bd);
+                  return (dir === 'asc' ? cmp : -cmp) || (a.idx - b.idx);
+                }
+                if (ad && !bd) return dir === 'asc' ? -1 : 1;
+                if (!ad && bd) return dir === 'asc' ? 1 : -1;
+                return a.idx - b.idx;
+              })
+              .map(item => item.card);
+          });
+          return { ...prev, cards };
+        });
+      };
+
+      const renameBoard = (title) => {
+        const t = title.trim();
+        if (!t || t === boardRef.current.title) return;
+        commit(prev => ({ ...prev, title: t }));
+      };
+
+      /* ── Card ops ── */
+      const addCard = (colId, title, notes) => {
+        if (!title.trim()) return;
+        commit(prev => ({
+          ...prev,
+          cards: {
+            ...prev.cards,
+            [colId]: [...(prev.cards[colId] || []), {
+              id: uid(), title: title.trim(), notes: notes.trim(),
+              labels: filterIds.length > 0 ? [...filterIds] : [],
+              due: '',
+              complete: false,
+              attachments: [],
+              checklist: [],
+            }],
+          },
+        }));
+        setAddingTo(null);
+      };
+
+      const updateCard = (colId, cardId, patch) => {
+        commit(prev => ({
+          ...prev,
+          cards: {
+            ...prev.cards,
+            [colId]: prev.cards[colId].map(c => c.id === cardId ? { ...c, ...patch } : c),
+          },
+        }));
+      };
+
+      const deleteCard = (colId, cardId) => {
+        commit(prev => ({
+          ...prev,
+          cards: { ...prev.cards, [colId]: prev.cards[colId].filter(c => c.id !== cardId) },
+        }));
+        setModal(null);
+      };
+
+      const toggleChecklistItem = (colId, cardId, itemId) => {
+        commit(prev => ({
+          ...prev,
+          cards: {
+            ...prev.cards,
+            [colId]: prev.cards[colId].map(c => c.id !== cardId ? c : ({
+              ...c,
+              checklist: c.checklist.map(it => it.id === itemId ? { ...it, done: !it.done } : it),
+            })),
+          },
+        }));
+      };
+
+      /* ── Column ops ── */
+      const toggleCardComplete = (colId, cardId) => {
+        commit(prev => ({
+          ...prev,
+          cards: {
+            ...prev.cards,
+            [colId]: prev.cards[colId].map(c => c.id === cardId ? { ...c, complete: !c.complete } : c),
+          },
+        }));
+      };
+
+      const addColumn = () => {
+        const name = window.prompt('New column name', 'New column');
+        if (!name || !name.trim()) return;
+        const id = uid('col');
+        const color = COL_PALETTE[boardRef.current.columns.length % COL_PALETTE.length];
+        commit(prev => ({
+          ...prev,
+          columns: [...prev.columns, { id, label: name.trim(), color }],
+          cards: { ...prev.cards, [id]: [] },
+        }));
+      };
+
+      const renameColumn = (colId, label) => {
+        const t = label.trim();
+        if (!t) return;
+        commit(prev => ({
+          ...prev,
+          columns: prev.columns.map(c => c.id === colId ? { ...c, label: t } : c),
+        }));
+      };
+
+      const setColumnColor = (colId, color) => {
+        commit(prev => ({
+          ...prev,
+          columns: prev.columns.map(c => c.id === colId ? { ...c, color } : c),
+        }));
+      };
+
+      const deleteColumn = (colId) => {
+        const cur = boardRef.current;
+        const col = cur.columns.find(c => c.id === colId);
+        const count = (cur.cards[colId] || []).length;
+        const msg = count > 0
+          ? `Delete "${col.label}" and its ${count} card${count === 1 ? '' : 's'}? This cannot be undone.`
+          : `Delete "${col.label}"?`;
+        if (!window.confirm(msg)) return;
+        commit(prev => {
+          const cards = { ...prev.cards };
+          delete cards[colId];
+          return {
+            ...prev,
+            columns: prev.columns.filter(c => c.id !== colId),
+            cards,
+          };
+        });
+      };
+
+      const moveColumn = (fromIdx, insertIdx) => {
+        if (fromIdx === insertIdx || fromIdx === insertIdx - 1) return;
+        commit(prev => {
+          const cols = [...prev.columns];
+          const [moved] = cols.splice(fromIdx, 1);
+          const adj = insertIdx > fromIdx ? insertIdx - 1 : insertIdx;
+          cols.splice(adj, 0, moved);
+          return { ...prev, columns: cols };
+        });
+      };
+
+      /* ── Labels ── */
+      const updateLabels = useCallback((newLabels) => {
+        commit(prev => {
+          const valid = new Set(newLabels.map(l => l.id));
+          const cards = {};
+          for (const cid in prev.cards) {
+            cards[cid] = prev.cards[cid].map(c => ({
+              ...c,
+              labels: (c.labels || []).filter(id => valid.has(id)),
+            }));
+          }
+          return { ...prev, labels: newLabels, cards };
+        });
+      }, [commit]);
+
+      /* ── Card drag ── */
+      const setCardDropTarget = (target) => {
+        dropTargetRef.current = target;
+        setDropTarget(dt => (dt?.col === target.col && dt?.idx === target.idx) ? dt : target);
+      };
+
+      const clearCardDragState = () => {
+        if (pointerDragRef.current?.longPressTimer) {
+          clearTimeout(pointerDragRef.current.longPressTimer);
+        }
+        removeCardPointerListeners();
+        setDraggingId(null);
+        setDropTarget(null);
+        setPointerDrag(null);
+        dragRef.current = null;
+        pointerDragRef.current = null;
+        dropTargetRef.current = null;
+        document.body.classList.remove('card-pointer-dragging');
+      };
+
+      const getCardDropTarget = (areaEl, colId, clientY) => {
+        if (!dragRef.current) return null;
+        const list = boardRef.current.cards[colId] || [];
+        if (list.length === 0 || (list.length === 1 && list[0].id === dragRef.current.cardId)) {
+          return { col: colId, idx: 0 };
+        }
+
+        const srcId = dragRef.current.cardId;
+        const cardEls = areaEl.querySelectorAll('.card[data-card-id]');
+
+        let insertIdx = null;
+        let lastVisibleDataIdx = -1;
+        for (const el of cardEls) {
+          if (el.dataset.cardId === srcId) continue;
+          const dataIdx = +el.dataset.idx;
+          const rect = el.getBoundingClientRect();
+          if (rect.height === 0) continue;
+          if (clientY <= rect.top + rect.height / 2) {
+            insertIdx = dataIdx;
+            break;
+          }
+          lastVisibleDataIdx = dataIdx;
+        }
+        if (insertIdx === null) {
+          insertIdx = lastVisibleDataIdx >= 0 ? lastVisibleDataIdx + 1 : list.length;
+        }
+
+        return { col: colId, idx: insertIdx };
+      };
+
+      const cardsAreaFromPoint = (clientX, clientY) => {
+        const els = document.elementsFromPoint(clientX, clientY);
+        for (const el of els) {
+          const area = el.closest?.('.cards-area');
+          if (area) return area;
+          const col = el.closest?.('.column');
+          const colArea = col?.querySelector?.('.cards-area');
+          if (colArea) return colArea;
+        }
+        return null;
+      };
+
+      const moveCardToDropTarget = () => {
+        const target = dropTargetRef.current || dropTarget;
+        if (!dragRef.current || !target) return false;
+        const { colId: src, idx: srcIdx } = dragRef.current;
+        const { col: dst, idx: dstIdx } = target;
+        commit(prev => {
+          const next = { ...prev, cards: { ...prev.cards } };
+          prev.columns.forEach(c => { next.cards[c.id] = [...prev.cards[c.id]]; });
+          const [moved] = next.cards[src].splice(srcIdx, 1);
+          if (!moved) return prev;
+          let ins = dstIdx;
+          if (src === dst && dstIdx > srcIdx) ins--;
+          next.cards[dst].splice(Math.max(0, ins), 0, moved);
+          return next;
+        });
+        return true;
+      };
+
+      const onDragStart = (e, cardId, colId, idx) => {
+        const target = e.target.closest ? e.target : e.target.parentElement;
+        if (target?.closest('.no-drag')) { e.preventDefault(); return; }
+        dragRef.current = { cardId, colId, idx };
+
+        // ghost: tilted clone of the card
+        const el = e.currentTarget;
+        const clone = el.cloneNode(true);
+        Object.assign(clone.style, {
+          position: 'fixed', top: '-9999px', left: '0',
+          width: el.offsetWidth + 'px',
+          transform: 'rotate(2.5deg) scale(1.04)',
+          boxShadow: '0 12px 36px oklch(0.2 0 0 / 0.22)',
+          borderRadius: '10px',
+          background: 'var(--card-bg)',
+          color: 'var(--text)',
+          padding: '13px 15px',
+          opacity: '0.96',
+          pointerEvents: 'none',
+          fontFamily: "'DM Sans', sans-serif",
+          display: 'block',
+        });
+        document.body.appendChild(clone);
+        try { e.dataTransfer.setDragImage(clone, Math.round(el.offsetWidth / 2), 30); } catch {}
+        requestAnimationFrame(() => clone.parentNode && document.body.removeChild(clone));
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', cardId); } catch {}
+
+        setDraggingId(cardId);
+        setCardDropTarget({ col: colId, idx });
+      };
+
+      const onDragEnd = () => {
+        clearCardDragState();
+      };
+
+      const onDragOverArea = (e, colId) => {
+        if (!dragRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const target = getCardDropTarget(e.currentTarget, colId, e.clientY);
+        if (target) setCardDropTarget(target);
+      };
+
+      const onDrop = (e, colId) => {
+        e.preventDefault();
+        if (!dragRef.current) return;
+        moveCardToDropTarget();
+        clearCardDragState();
+      };
+
+      /* ── Column drag ── */
+      const addCardPointerListeners = () => {
+        removeCardPointerListeners();
+        window.addEventListener('pointermove', onCardWindowPointerMove, true);
+        window.addEventListener('pointerup', onCardWindowPointerUp, true);
+        window.addEventListener('pointercancel', onCardWindowPointerCancel, true);
+        window.addEventListener('keydown', onCardWindowKeyDown, true);
+        window.addEventListener('blur', onCardWindowBlur);
+      };
+
+      const removeCardPointerListeners = () => {
+        window.removeEventListener('pointermove', onCardWindowPointerMove, true);
+        window.removeEventListener('pointerup', onCardWindowPointerUp, true);
+        window.removeEventListener('pointercancel', onCardWindowPointerCancel, true);
+        window.removeEventListener('keydown', onCardWindowKeyDown, true);
+        window.removeEventListener('blur', onCardWindowBlur);
+      };
+
+      const onCardWindowPointerMove = (e) => onCardPointerMove(e);
+      const onCardWindowPointerUp = (e) => onCardPointerUp(e);
+      const onCardWindowPointerCancel = (e) => onCardPointerCancel(e);
+      const onCardWindowKeyDown = (e) => {
+        if (e.key === 'Escape') clearCardDragState();
+      };
+      const onCardWindowBlur = () => clearCardDragState();
+
+      const suppressNextCardClick = () => {
+        window.__kanbanSuppressCardClickUntil = Date.now() + 650;
+      };
+
+      const startCardPointerDrag = (d) => {
+        if (!d || d.dragging) return false;
+        if (d.longPressTimer) {
+          clearTimeout(d.longPressTimer);
+          d.longPressTimer = null;
+        }
+        d.dragging = true;
+        dragRef.current = { cardId: d.cardId, colId: d.colId, idx: d.idx };
+        setDraggingId(d.cardId);
+        setCardDropTarget({ col: d.colId, idx: d.idx });
+        document.body.classList.add('card-pointer-dragging');
+        return true;
+      };
+
+      const onCardPointerDown = (e, cardId, colId, idx) => {
+        const target = e.target.closest ? e.target : e.target.parentElement;
+        if (e.button !== 0 || target?.closest('.no-drag')) return false;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        pointerDragRef.current = {
+          pointerId: e.pointerId,
+          sourceEl: e.currentTarget,
+          cardId, colId, idx,
+          startX: e.clientX,
+          startY: e.clientY,
+          x: e.clientX,
+          y: e.clientY,
+          offsetX: e.clientX - rect.left,
+          offsetY: e.clientY - rect.top,
+          width: rect.width,
+          height: rect.height,
+          dragging: false,
+          longPressTimer: null,
+        };
+        pointerDragRef.current.longPressTimer = setTimeout(() => {
+          const d = pointerDragRef.current;
+          if (!d || d.pointerId !== e.pointerId || d.dragging) return;
+          startCardPointerDrag(d);
+          const { sourceEl, longPressTimer, ...viewDrag } = d;
+          setPointerDrag({ ...viewDrag });
+        }, 320);
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+        addCardPointerListeners();
+        return true;
+      };
+
+      const onCardPointerMove = (e) => {
+        const d = pointerDragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!d.dragging && Math.hypot(dx, dy) < 5) return false;
+
+        e.preventDefault();
+        const startedThisMove = !d.dragging;
+        d.x = e.clientX;
+        d.y = e.clientY;
+
+        const updateCurrentCardDropTarget = () => {
+          const area = cardsAreaFromPoint(e.clientX, e.clientY);
+          const colId = area?.dataset?.colId;
+          if (area && colId) {
+            const target = getCardDropTarget(area, colId, e.clientY);
+            if (target) setCardDropTarget(target);
+          }
+        };
+
+        if (!d.dragging) startCardPointerDrag(d);
+
+        const { sourceEl, longPressTimer, ...viewDrag } = d;
+        setPointerDrag({ ...viewDrag });
+
+        updateCurrentCardDropTarget();
+
+        if (d.dragging && e.buttons === 0 && !startedThisMove) {
+          suppressNextCardClick();
+          moveCardToDropTarget();
+          clearCardDragState();
+        }
+
+        return true;
+      };
+
+      const onCardPointerUp = (e) => {
+        const d = pointerDragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        try { d.sourceEl?.releasePointerCapture(e.pointerId); } catch {}
+
+        const wasDragging = !!d.dragging;
+        if (wasDragging) {
+          e.preventDefault();
+          suppressNextCardClick();
+          moveCardToDropTarget();
+        }
+        clearCardDragState();
+        return wasDragging;
+      };
+
+      const onCardPointerCancel = (e) => {
+        const d = pointerDragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        try { d.sourceEl?.releasePointerCapture(e.pointerId); } catch {}
+        const wasDragging = !!d.dragging;
+        if (wasDragging) suppressNextCardClick();
+        clearCardDragState();
+        return wasDragging;
+      };
+
+      const onColDragStart = (e, colId, idx) => {
+        const target = e.target.closest ? e.target : e.target.parentElement;
+        if (target?.closest('input, button, .col-delete, .no-drag')) {
+          e.preventDefault();
+          return;
+        }
+        colDragRef.current = { colId, idx };
+        setDraggingCol(colId);
+        e.dataTransfer.effectAllowed = 'move';
+        try {
+          const ghost = document.createElement('div');
+          ghost.style.cssText = 'position:fixed;top:-9999px;width:1px;height:1px';
+          document.body.appendChild(ghost);
+          e.dataTransfer.setDragImage(ghost, 0, 0);
+          requestAnimationFrame(() => ghost.parentNode && document.body.removeChild(ghost));
+        } catch {}
+      };
+
+      const onColDragOver = (e, idx) => {
+        if (!colDragRef.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const insertIdx = e.clientX < rect.left + rect.width / 2 ? idx : idx + 1;
+        setColDropTarget(t => t?.idx === insertIdx ? t : { idx: insertIdx });
+      };
+
+      const onColDrop = () => {
+        if (!colDragRef.current || !colDropTarget) {
+          setDraggingCol(null); setColDropTarget(null); colDragRef.current = null;
+          return;
+        }
+        moveColumn(colDragRef.current.idx, colDropTarget.idx);
+        setDraggingCol(null); setColDropTarget(null); colDragRef.current = null;
+      };
+
+      const onColDragEnd = () => {
+        setDraggingCol(null); setColDropTarget(null); colDragRef.current = null;
+      };
+
+      /* ── Import / export ── */
+      const fallbackExport = (nextBoard) => {
+        const blob = new Blob([JSON.stringify(nextBoard, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        Object.assign(document.createElement('a'), { href: url, download: datedJsonFileName(nextBoard.title) }).click();
+        URL.revokeObjectURL(url);
+      };
+
+      const rememberJsonPickerHandle = (handle) => {
+        if (!handle) return;
+        jsonPickerHandleRef.current = handle;
+        idbSet('jsonPicker', handle).catch(err => console.warn('Could not remember JSON picker location', err));
+      };
+
+      const jsonPickerOptions = (extra = {}) => ({
+        id: JSON_PICKER_ID,
+        types: JSON_FILE_TYPES,
+        ...(jsonPickerHandleRef.current ? { startIn: jsonPickerHandleRef.current } : {}),
+        ...extra,
+      });
+
+      const onExport = async () => {
+        const nextBoard = boardRef.current;
+        const json = JSON.stringify(nextBoard, null, 2);
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await window.showSaveFilePicker(jsonPickerOptions({
+              suggestedName: datedJsonFileName(nextBoard.title),
+            }));
+            rememberJsonPickerHandle(handle);
+            await writeFile(handle, json);
+            return;
+          } catch (err) {
+            if (err?.name === 'AbortError') return;
+            console.warn('Save picker failed, falling back to download', err);
+          }
+        }
+        fallbackExport(nextBoard);
+      };
+
+      const importBoardText = (text) => {
+        try {
+          const parsed = JSON.parse(text);
+          const next = migrate(parsed);
+          commit(next);
+        } catch {
+          alert('Invalid JSON file.');
+        }
+      };
+
+      const fallbackImport = () => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = '.json,application/json';
+        inp.onchange = ev => {
+          const f = ev.target.files[0]; if (!f) return;
+          const r = new FileReader();
+          r.onload = e => importBoardText(e.target.result);
+          r.readAsText(f);
+        };
+        inp.click();
+      };
+
+      const onImport = async () => {
+        if ('showOpenFilePicker' in window) {
+          try {
+            const [handle] = await window.showOpenFilePicker(jsonPickerOptions({
+              multiple: false,
+            }));
+            if (!handle) return;
+            rememberJsonPickerHandle(handle);
+            const file = await handle.getFile();
+            importBoardText(await file.text());
+            return;
+          } catch (err) {
+            if (err?.name === 'AbortError') return;
+            console.warn('Open picker failed, falling back to file input', err);
+          }
+        }
+        fallbackImport();
+      };
+
+      const onNewBoard = () => {
+        const ok = window.confirm(
+          'Create a new blank board? This will replace the current board in this browser and disconnect Auto Backup. Export JSON first if you want a guaranteed restore point.'
+        );
+        if (!ok) return;
+        clearTimeout(backupTimer.current);
+        backupFileRef.current = null;
+        backupDirRef.current = null;
+        storedBackupRef.current = null;
+        clearBackupMeta();
+        if (supportsFileBackups()) setBackupStatus({ kind: 'idle', text: 'no backup' });
+        else setBackupStatus({ kind: 'unsupported', text: 'manual export' });
+        idbDelete('backup').catch(err => console.warn('Could not clear backup handle', err));
+        setModal(null);
+        setAddingTo(null);
+        setLabelMgrOpen(false);
+        setFilterIds([]);
+        commit(makeBlankBoard());
+      };
+
+      /* ── Keyboard shortcuts ── */
+      useEffect(() => {
+        const isTyping = (el) => {
+          if (!el) return false;
+          const tag = el.tagName;
+          return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+        };
+        const onKey = (e) => {
+          if (isTyping(e.target)) return;
+          if (modal || addingTo !== null || labelMgrOpen) return;
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+          if (e.key === 'n' || e.key === 'N') {
+            const focused = document.activeElement;
+            let colId = boardRef.current.columns[0]?.id;
+            if (focused && focused.classList && focused.classList.contains('card') && focused.dataset.colId) {
+              colId = focused.dataset.colId;
+            }
+            if (colId) { e.preventDefault(); setAddingTo(colId); }
+            return;
+          }
+
+          if (e.key === 'Escape' && filterIds.length > 0) {
+            e.preventDefault();
+            clearFilter();
+            return;
+          }
+
+          if (e.key.startsWith('Arrow')) {
+            const focused = document.activeElement;
+            const cur = boardRef.current;
+
+            if (!focused || !focused.classList?.contains('card')) {
+              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                for (const col of cur.columns) {
+                  const first = document.querySelector(`.card[data-col-id="${col.id}"]`);
+                  if (first) { first.focus(); e.preventDefault(); return; }
+                }
+              }
+              return;
+            }
+
+            const colId = focused.dataset.colId;
+            const idx   = +focused.dataset.idx;
+            const colIdx = cur.columns.findIndex(c => c.id === colId);
+            if (colIdx < 0) return;
+
+            // Walk visible cards (data-idx) in current column for vertical, target col for horizontal
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+              const dir = e.key === 'ArrowDown' ? 1 : -1;
+              const sibs = Array.from(document.querySelectorAll(`.card[data-col-id="${colId}"]`));
+              const ordered = sibs.sort((a, b) => +a.dataset.idx - +b.dataset.idx);
+              const pos = ordered.findIndex(el => +el.dataset.idx === idx);
+              const target = ordered[pos + dir];
+              if (target) {
+                e.preventDefault();
+                target.focus();
+                target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+              }
+              return;
+            }
+
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              const step = e.key === 'ArrowRight' ? 1 : -1;
+              for (let nci = colIdx + step; nci >= 0 && nci < cur.columns.length; nci += step) {
+                const targetColId = cur.columns[nci].id;
+                const sibs = Array.from(document.querySelectorAll(`.card[data-col-id="${targetColId}"]`));
+                if (sibs.length === 0) continue;
+                sibs.sort((a, b) => +a.dataset.idx - +b.dataset.idx);
+                const target = sibs[Math.min(idx, sibs.length - 1)] || sibs[0];
+                e.preventDefault();
+                target.focus();
+                target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+                return;
+              }
+            }
+          }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [modal, addingTo, labelMgrOpen, filterIds.length]);
+
+      const modalCard = useMemo(() => {
+        if (!modal) return null;
+        return (board.cards[modal.colId] || []).find(c => c.id === modal.cardId) || null;
+      }, [modal, board]);
+      const pointerGhostCard = useMemo(() => {
+        if (!pointerDrag?.dragging) return null;
+        return (board.cards[pointerDrag.colId] || []).find(c => c.id === pointerDrag.cardId) || null;
+      }, [pointerDrag, board]);
+
+      return (
+        <>
+          <TopBar
+            title={board.title || 'Kanban'}
+            onRenameBoard={renameBoard}
+            saveFx={saveFx}
+            backupStatus={backupStatus}
+            onChooseBackup={chooseBackupFile}
+            onExport={onExport}
+            onImport={onImport}
+            onNewBoard={onNewBoard}
+            onSortDue={sortCardsByDue}
+            dueSortDir={nextDueSortDir}
+            dark={dark}
+            onToggleDark={() => setDark(d => !d)}
+            onManageLabels={() => setLabelMgrOpen(true)}
+            labels={board.labels}
+            filterIds={filterIds}
+            onToggleFilter={toggleFilter}
+            onClearFilter={clearFilter}
+          />
+          <main className="board" onDrop={onColDrop} onDragOver={e => { if (colDragRef.current) e.preventDefault(); }}>
+            {board.columns.map((col, colIdx) => (
+              <Column
+                key={col.id}
+                def={col}
+                colIdx={colIdx}
+                cards={board.cards[col.id] || []}
+                labels={board.labels}
+                filterIds={filterIds}
+                draggingId={draggingId}
+                dropTarget={dropTarget}
+                addingTo={addingTo}
+                draggingCol={draggingCol}
+                colDropIdx={colDropTarget?.idx}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
+                onDragOverArea={onDragOverArea}
+                onDrop={onDrop}
+                onCardPointerDown={onCardPointerDown}
+                onCardPointerMove={onCardPointerMove}
+                onCardPointerUp={onCardPointerUp}
+                onCardPointerCancel={onCardPointerCancel}
+                onColDragStart={onColDragStart}
+                onColDragOver={onColDragOver}
+                onColDragEnd={onColDragEnd}
+                onEdit={card => setModal({ cardId: card.id, colId: col.id })}
+                onAdd={addCard}
+                onStartAdd={() => setAddingTo(col.id)}
+                onCancelAdd={() => setAddingTo(null)}
+                onRename={renameColumn}
+                onColor={setColumnColor}
+                onDelete={deleteColumn}
+                onToggleChecklistItem={toggleChecklistItem}
+                onToggleCardComplete={toggleCardComplete}
+                onToggleFilter={toggleFilter}
+              />
+            ))}
+            <button className="col-add-btn" onClick={addColumn} aria-label="Add column">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              Add column
+            </button>
+          </main>
+          {pointerGhostCard && (
+            <CardDragGhost
+              card={pointerGhostCard}
+              labels={board.labels}
+              drag={pointerDrag}
+            />
+          )}
+          {modalCard && (
+            <EditModal
+              card={modalCard}
+              colId={modal.colId}
+              columns={board.columns}
+              labels={board.labels}
+              onUpdate={(patch) => updateCard(modal.colId, modal.cardId, patch)}
+              onDelete={() => deleteCard(modal.colId, modal.cardId)}
+              onClose={() => setModal(null)}
+            />
+          )}
+          {labelMgrOpen && (
+            <LabelManager
+              labels={board.labels}
+              onSave={updateLabels}
+              onClose={() => setLabelMgrOpen(false)}
+            />
+          )}
+        </>
+      );
+    }
+
+    /* ─── TopBar ─── */
+    function TopBar({ title, onRenameBoard, saveFx, backupStatus, onChooseBackup, onExport, onImport, onNewBoard, onSortDue, dueSortDir, dark, onToggleDark, onManageLabels, labels, filterIds, onToggleFilter, onClearFilter }) {
+      const filterLabels = filterIds.map(id => labels.find(l => l.id === id)).filter(Boolean);
+      const [draftTitle, setDraftTitle] = useState(title);
+      const [backupMenuOpen, setBackupMenuOpen] = useState(false);
+      const backupMenuRef = useRef(null);
+
+      useEffect(() => { setDraftTitle(title); }, [title]);
+      useEffect(() => {
+        if (!backupMenuOpen) return;
+        const onPointerDown = (e) => {
+          if (!backupMenuRef.current?.contains(e.target)) setBackupMenuOpen(false);
+        };
+        const onKey = (e) => {
+          if (e.key === 'Escape') setBackupMenuOpen(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+          document.removeEventListener('pointerdown', onPointerDown);
+          document.removeEventListener('keydown', onKey);
+        };
+      }, [backupMenuOpen]);
+
+      const finishTitle = (commit) => {
+        const next = draftTitle.trim();
+        if (commit && next) onRenameBoard(next);
+        else setDraftTitle(title);
+      };
+      const runBackupAction = (fn) => {
+        setBackupMenuOpen(false);
+        fn();
+      };
+      const backupNeedsAttention = !['linked', 'saved', 'saving'].includes(backupStatus.kind);
+      const backupButtonClass = [
+        'tbtn',
+        backupNeedsAttention ? 'backup-attention' : 'backup-ok',
+      ].join(' ');
+
+      return (
+        <header className="topbar" role="banner">
+          <input
+            className="topbar-logo"
+            value={draftTitle}
+            size={Math.max(6, Math.min(28, draftTitle.length || 6))}
+            onChange={e => setDraftTitle(e.target.value)}
+            onBlur={() => finishTitle(true)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+              if (e.key === 'Escape') {
+                setDraftTitle(title);
+                e.currentTarget.blur();
+              }
+            }}
+            aria-label="Board name"
+            title="Rename board"
+            spellCheck={false}
+          />
+          <div className="topbar-pip" aria-hidden="true"></div>
+
+          {filterLabels.length > 0 && (
+            <div className="filter-strip" role="region" aria-label="Active filters">
+              <span className="filter-strip-label">Filter</span>
+              {filterLabels.map(lab => (
+                <button
+                  key={lab.id}
+                  className="label-pill btn filter-active"
+                  style={{ background: lab.color, color: 'white' }}
+                  onClick={() => onToggleFilter(lab.id)}
+                  title={`Remove ${lab.name} from filter`}
+                  aria-label={`Remove ${lab.name} from filter`}
+                >
+                  {lab.name}
+                  <span className="x" aria-hidden="true">✕</span>
+                </button>
+              ))}
+              <button className="filter-clear" onClick={onClearFilter}>clear</button>
+            </div>
+          )}
+
+          <div className="topbar-spacer"></div>
+
+          <div className="kbd-hint" title="Keyboard shortcuts">
+            <span><span className="kbd">N</span> new</span>
+            <span><span className="kbd">←</span><span className="kbd">→</span><span className="kbd">↑</span><span className="kbd">↓</span> nav</span>
+          </div>
+          <div className={`save-badge${saveFx ? ' show' : ''}`} aria-live="polite" aria-label={saveFx ? 'Saved' : ''}>
+            <div className="save-badge-dot"></div>
+            Saved
+          </div>
+          <button
+            className="tbtn"
+            onClick={onSortDue}
+            title={dueSortDir === 'asc' ? 'Sort due dates earliest first' : 'Sort due dates latest first'}
+            aria-label={dueSortDir === 'asc' ? 'Sort due dates earliest first' : 'Sort due dates latest first'}
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <path d="M2.2 2.2h8.6v8.6H2.2V2.2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+              <path d="M2.2 4.7h8.6M4.2 1.2v2M8.8 1.2v2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              {dueSortDir === 'asc' ? (
+                <path d="M6.5 10V6.6M4.9 8.1l1.6-1.6 1.6 1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              ) : (
+                <path d="M6.5 6.2v3.4M4.9 8.1l1.6 1.6 1.6-1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              )}
+            </svg>
+            Due
+          </button>
+          <button
+            className="theme-toggle"
+            onClick={onToggleDark}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={dark ? 'Light mode' : 'Dark mode'}
+          >
+            <div className="toggle-track">
+              <div className={`toggle-icon${!dark ? ' active' : ''}`}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                  <circle cx="5.5" cy="5.5" r="2.3" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M5.5 1v1M5.5 9v1M1 5.5h1M9 5.5h1M2.3 2.3l.7.7M7.7 7.7l.6.6M7.7 2.3l-.7.7M2.3 7.7l.6.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div className={`toggle-icon${dark ? ' active' : ''}`}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                  <path d="M9 6.5A4 4 0 014.5 2a4 4 0 100 8 4 4 0 004.5-3.5z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+            <div className="toggle-knob"></div>
+          </button>
+          <button className="tbtn" onClick={onManageLabels} title="Manage labels">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+              <path d="M1 1h5l6 6-5 5-6-6V1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <circle cx="3.5" cy="3.5" r="0.9" fill="currentColor"/>
+            </svg>
+            Labels
+          </button>
+          <div className="backup-wrap" ref={backupMenuRef}>
+            <button
+              className={backupButtonClass}
+              onClick={() => setBackupMenuOpen(open => !open)}
+              aria-haspopup="menu"
+              aria-expanded={backupMenuOpen}
+              title={backupNeedsAttention ? `Backup needs attention: ${backupStatus.text}` : `Backup: ${backupStatus.text}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M2 11.5h9V4.8L7.2 1.5H2v10z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                <path d="M7 1.5v3.6h4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+              </svg>
+              Backup
+              {backupNeedsAttention && <span className="backup-alert" aria-hidden="true">!</span>}
+            </button>
+            {backupMenuOpen && (
+              <div className="backup-menu" role="menu" aria-label="Backup actions">
+                <button className="backup-menu-item" role="menuitem" onClick={() => runBackupAction(onImport)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M6.5 1v8M3 6l3.5 3.5L10 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 12h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  Import JSON
+                </button>
+                <button className="backup-menu-item" role="menuitem" onClick={() => runBackupAction(onExport)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M6.5 9V1M3 4l3.5-3.5L10 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M1 12h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                  Export JSON
+                </button>
+                <button className="backup-menu-item" role="menuitem" onClick={() => runBackupAction(onChooseBackup)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M4 8.2l1.5 1.5L9 6.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 11.5h9V4.8L7.2 1.5H2v10z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                  </svg>
+                  Auto Backup
+                </button>
+                <div className="backup-menu-sep" role="separator"></div>
+                <button className="backup-menu-item danger" role="menuitem" onClick={() => runBackupAction(onNewBoard)}>
+                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                    <path d="M2 2h9v9H2V2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+                    <path d="M4 6.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  New Board
+                </button>
+                <div className={`backup-status backup-menu-status ${backupStatus.kind}`} title={backupStatus.text}>
+                  <div className="backup-dot"></div>
+                  <span>{backupStatus.text}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </header>
+      );
+    }
+
+    /* ─── Column ─── */
+    function Column({
+      def, colIdx, cards, labels, filterIds,
+      draggingId, dropTarget, addingTo,
+      draggingCol, colDropIdx,
+      onDragStart, onDragEnd, onDragOverArea, onDrop,
+      onCardPointerDown, onCardPointerMove, onCardPointerUp, onCardPointerCancel,
+      onColDragStart, onColDragOver, onColDragEnd,
+      onEdit, onAdd, onStartAdd, onCancelAdd,
+      onRename, onColor, onDelete, onToggleChecklistItem, onToggleCardComplete, onToggleFilter,
+    }) {
+      const isCardDropActive = dropTarget?.col === def.id;
+      const adding = addingTo === def.id;
+      const [renaming, setRenaming] = useState(false);
+      const [colorOpen, setColorOpen] = useState(false);
+      const [renameVal, setRenameVal] = useState(def.label);
+      const renameRef = useRef(null);
+      const colorRef = useRef(null);
+
+      useEffect(() => { if (renaming) { renameRef.current?.focus(); renameRef.current?.select(); } }, [renaming]);
+      useEffect(() => { if (!renaming) setRenameVal(def.label); }, [def.label, renaming]);
+      useEffect(() => {
+        if (!colorOpen) return;
+        const onPointerDown = (e) => {
+          if (!colorRef.current?.contains(e.target)) setColorOpen(false);
+        };
+        const onKey = (e) => {
+          if (e.key === 'Escape') setColorOpen(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+          document.removeEventListener('pointerdown', onPointerDown);
+          document.removeEventListener('keydown', onKey);
+        };
+      }, [colorOpen]);
+
+      const finishRename = (commit) => {
+        setRenaming(false);
+        if (commit) {
+          const t = renameVal.trim();
+          if (t && t !== def.label) onRename(def.id, t);
+          else setRenameVal(def.label);
+        } else {
+          setRenameVal(def.label);
+        }
+      };
+
+      const filterSet = filterIds;
+      const isVisible = (c) => filterSet.length === 0 || (c.labels || []).some(id => filterSet.includes(id));
+      const visibleCount = filterSet.length === 0 ? cards.length : cards.filter(isVisible).length;
+
+      const showColDropBefore = draggingCol && draggingCol !== def.id && colDropIdx === colIdx;
+      const showColDropAfter  = draggingCol && draggingCol !== def.id && colDropIdx === colIdx + 1;
+
+      const colClass = [
+        'column',
+        isCardDropActive ? 'drop-active' : '',
+        draggingCol === def.id ? 'col-dragging' : '',
+        showColDropBefore ? 'col-drop-before' : '',
+        showColDropAfter ? 'col-drop-after' : '',
+      ].filter(Boolean).join(' ');
+
+      return (
+        <section
+          className={colClass}
+          aria-label={`${def.label} column`}
+          onDrop={e => onDrop(e, def.id)}
+          onDragOver={e => {
+            if (draggingCol !== null && draggingCol !== undefined) onColDragOver(e, colIdx);
+            else e.preventDefault();
+          }}
+        >
+          <div
+            className="col-header"
+            draggable={!renaming}
+            onDragStart={e => onColDragStart(e, def.id, colIdx)}
+            onDragEnd={onColDragEnd}
+          >
+            <div className="col-color-wrap no-drag" ref={colorRef}>
+              <button
+                type="button"
+                className="col-dot"
+                style={{ background: def.color }}
+                onClick={e => { e.stopPropagation(); setColorOpen(open => !open); }}
+                onMouseDown={e => e.stopPropagation()}
+                aria-label={`Change ${def.label} color`}
+                title="Change column color"
+              ></button>
+              {colorOpen && (
+                <div className="col-color-menu" role="menu" aria-label="Column colors">
+                  {COL_PALETTE.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`col-color-swatch${color === def.color ? ' active' : ''}`}
+                      style={{ background: color }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        onColor(def.id, color);
+                        setColorOpen(false);
+                      }}
+                      aria-label={`Set color ${color}`}
+                      aria-pressed={color === def.color}
+                    ></button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {renaming ? (
+              <input
+                ref={renameRef}
+                className="col-rename-input"
+                value={renameVal}
+                onChange={e => setRenameVal(e.target.value)}
+                onBlur={() => finishRename(true)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') finishRename(true);
+                  if (e.key === 'Escape') finishRename(false);
+                }}
+                aria-label="Column name"
+              />
+            ) : (
+              <h2
+                className="col-title"
+                tabIndex={0}
+                onClick={() => setRenaming(true)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'F2') setRenaming(true); }}
+                title="Click to rename"
+              >{def.label}</h2>
+            )}
+            <span
+              className="col-count"
+              aria-label={filterSet.length > 0 ? `${visibleCount} of ${cards.length} visible` : `${cards.length} cards`}
+              title={filterSet.length > 0 ? `${visibleCount} visible · ${cards.length} total` : ''}
+            >{filterSet.length > 0 ? `${visibleCount}/${cards.length}` : cards.length}</span>
+            <button
+              className="col-delete no-drag"
+              onClick={e => { e.stopPropagation(); onDelete(def.id); }}
+              onMouseDown={e => e.stopPropagation()}
+              aria-label={`Delete ${def.label} column`}
+              title="Delete column"
+            >
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                <path d="M2 2l7 7M9 2l-7 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <div className="cards-area" data-col-id={def.id} onDragOver={e => onDragOverArea(e, def.id)} role="list">
+            {(() => {
+              const items = [];
+              const placeholderAt = isCardDropActive ? dropTarget.idx : -1;
+              for (let i = 0; i <= cards.length; i++) {
+                if (i === placeholderAt) items.push(<div key="ph" className="drop-placeholder" role="presentation" />);
+                if (i < cards.length) {
+                  const c = cards[i];
+                  if (!isVisible(c) && draggingId !== c.id) continue; // hide filtered cards (but keep source rendering rules)
+                  items.push(
+                    <KanbanCard
+                      key={c.id}
+                      card={c}
+                      idx={i}
+                      colId={def.id}
+                      labels={labels}
+                      filterIds={filterIds}
+                      isDragging={draggingId === c.id}
+                      onDragStart={onDragStart}
+                      onDragEnd={onDragEnd}
+                      onPointerDown={onCardPointerDown}
+                      onPointerMove={onCardPointerMove}
+                      onPointerUp={onCardPointerUp}
+                      onPointerCancel={onCardPointerCancel}
+                      onEdit={onEdit}
+                      onToggleChecklistItem={onToggleChecklistItem}
+                      onToggleComplete={onToggleCardComplete}
+                      onToggleFilter={onToggleFilter}
+                    />
+                  );
+                }
+              }
+              return items;
+            })()}
+          </div>
+
+          {adding ? (
+            <AddForm onAdd={(t, n) => onAdd(def.id, t, n)} onCancel={onCancelAdd} />
+          ) : (
+            <button className="add-btn" onClick={onStartAdd} aria-label={`Add card to ${def.label}`}>
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+                <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+              Add card
+            </button>
+          )}
+        </section>
+      );
+    }
+
+    /* ─── KanbanCard ─── */
+    function KanbanCard({
+      card, idx, colId, labels, filterIds, isDragging,
+      onPointerDown, onPointerMove, onPointerUp, onPointerCancel,
+      onEdit, onToggleChecklistItem, onToggleComplete, onToggleFilter,
+    }) {
+      const suppressClickRef = useRef(false);
+      const suppressClickUntilRef = useRef(0);
+      const cardLabels = (card.labels || [])
+        .map(id => labels.find(l => l.id === id))
+        .filter(Boolean);
+
+      const checklist = card.checklist || [];
+      const ckTotal = checklist.length;
+      const ckDone  = checklist.filter(i => i.done).length;
+      const ckVisible = checklist.slice(0, 3);
+      const ckExtra = ckTotal - ckVisible.length;
+      const dueState = dueStatus(card);
+
+      const onCardClick = (e) => {
+        const target = e.target.closest ? e.target : e.target.parentElement;
+        if (target?.closest('.no-drag')) return;
+        const globalSuppressUntil = window.__kanbanSuppressCardClickUntil || 0;
+        if (suppressClickRef.current || Date.now() < suppressClickUntilRef.current || Date.now() < globalSuppressUntil) {
+          e.preventDefault();
+          suppressClickRef.current = false;
+          return;
+        }
+        onEdit(card);
+      };
+
+      const onCardPointerDown = (e) => {
+        onPointerDown(e, card.id, colId, idx);
+      };
+
+      const onCardPointerMove = (e) => {
+        if (onPointerMove(e)) suppressClickRef.current = true;
+      };
+
+      const onCardPointerUp = (e) => {
+        if (onPointerUp(e)) {
+          suppressClickRef.current = true;
+          suppressClickUntilRef.current = Date.now() + 500;
+          setTimeout(() => { suppressClickRef.current = false; }, 500);
+        }
+      };
+
+      const onCardPointerCancel = (e) => {
+        if (onPointerCancel(e)) {
+          suppressClickRef.current = true;
+          suppressClickUntilRef.current = Date.now() + 500;
+          setTimeout(() => { suppressClickRef.current = false; }, 500);
+        }
+      };
+
+      return (
+        <article
+          className={`card${isDragging ? ' is-dragging' : ''}`}
+          draggable={false}
+          role="listitem"
+          tabIndex={0}
+          data-col-id={colId}
+          data-idx={idx}
+          data-card-id={card.id}
+          aria-label={`${card.title}${card.notes ? '. ' + card.notes : ''}. Click or press Enter to edit.`}
+          onPointerDown={onCardPointerDown}
+          onPointerMove={onCardPointerMove}
+          onPointerUp={onCardPointerUp}
+          onPointerCancel={onCardPointerCancel}
+          onClick={onCardClick}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onEdit(card); } }}
+        >
+          {cardLabels.length > 0 && (
+            <div className="card-labels" aria-label="Labels">
+              {cardLabels.map(lab => {
+                const active = filterIds.includes(lab.id);
+                return (
+                  <button
+                    key={lab.id}
+                    type="button"
+                    className={`label-pill no-drag${active ? ' filter-active' : ''}`}
+                    style={{ background: lab.color }}
+                    draggable={false}
+                    onClick={e => { e.stopPropagation(); onToggleFilter(lab.id); }}
+                    onMouseDown={e => e.stopPropagation()}
+                    title={active ? `Remove "${lab.name}" filter` : `Filter by "${lab.name}"`}
+                    aria-pressed={active}
+                  >{lab.name}</button>
+                );
+              })}
+            </div>
+          )}
+          <div className="card-title-row">
+            <button
+              type="button"
+              className={`ck-box no-drag${card.complete ? ' done' : ''}`}
+              draggable={false}
+              onClick={e => { e.stopPropagation(); onToggleComplete(colId, card.id); }}
+              onMouseDown={e => e.stopPropagation()}
+              aria-pressed={!!card.complete}
+              aria-label={card.complete ? `Mark "${card.title}" incomplete` : `Mark "${card.title}" complete`}
+              title={card.complete ? 'Mark incomplete' : 'Mark complete'}
+            >
+              {card.complete && (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M1.5 5l2.2 2.2L8.5 2.4" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+            <p className="card-title">{card.title}</p>
+          </div>
+          {card.notes && <p className="card-notes">{linkify(card.notes)}</p>}
+
+          {ckVisible.length > 0 && (
+            <div className="ck-mini" role="group" aria-label="Checklist">
+              {ckVisible.map(item => (
+                <div key={item.id} className={`ck-row${item.done ? ' done' : ''}`}>
+                  <button
+                    type="button"
+                    className={`ck-box no-drag${item.done ? ' done' : ''}`}
+                    draggable={false}
+                    onClick={e => { e.stopPropagation(); onToggleChecklistItem(colId, card.id, item.id); }}
+                    onMouseDown={e => e.stopPropagation()}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); onToggleChecklistItem(colId, card.id, item.id); } }}
+                    aria-pressed={item.done}
+                    aria-label={item.done ? `Mark "${item.text}" not done` : `Mark "${item.text}" done`}
+                    title={item.done ? 'Mark not done' : 'Mark done'}
+                  >
+                    {item.done && (
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                        <path d="M1.5 5l2.2 2.2L8.5 2.4" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                  <span className="ck-text">{item.text || <em style={{ opacity: 0.6 }}>Untitled item</em>}</span>
+                </div>
+              ))}
+              {ckExtra > 0 && <div className="ck-more">+{ckExtra} more</div>}
+            </div>
+          )}
+
+          {ckTotal > 0 && (
+            <div className={`ck-progress${ckDone === ckTotal ? ' complete' : ''}`} aria-label={`${ckDone} of ${ckTotal} done`}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                {ckDone === ckTotal && <path d="M3 5.5l2 2 3.2-3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>}
+              </svg>
+              {ckDone}/{ckTotal}
+            </div>
+          )}
+          {card.due && (
+            <div className="card-meta">
+              <span className={`due-pill ${dueState}`} aria-label={`Due ${formatDueDate(card.due)}`}>
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                  <rect x="1.4" y="2.2" width="8.2" height="7.2" rx="1.4" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M3.2 1.2v2M7.8 1.2v2M1.7 4.4h7.6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+                {formatDueDate(card.due)}
+              </span>
+            </div>
+          )}
+        </article>
+      );
+    }
+
+    /* ─── AddForm ─── */
+    function CardDragGhost({ card, labels, drag }) {
+      const cardLabels = (card.labels || [])
+        .map(id => labels.find(l => l.id === id))
+        .filter(Boolean);
+      const checklist = card.checklist || [];
+      const ckTotal = checklist.length;
+      const ckDone = checklist.filter(i => i.done).length;
+
+      return (
+        <article
+          className="card card-drag-ghost"
+          style={{
+            left: drag.x - drag.offsetX,
+            top: drag.y - drag.offsetY,
+            width: drag.width,
+          }}
+          aria-hidden="true"
+        >
+          {cardLabels.length > 0 && (
+            <div className="card-labels">
+              {cardLabels.map(lab => (
+                <span
+                  key={lab.id}
+                  className="label-pill"
+                  style={{ background: lab.color }}
+                >{lab.name}</span>
+              ))}
+            </div>
+          )}
+          <p className="card-title">{card.title}</p>
+          {card.notes && <p className="card-notes">{linkify(card.notes)}</p>}
+          {ckTotal > 0 && (
+            <div className={`ck-progress${ckDone === ckTotal ? ' complete' : ''}`}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                <rect x="1" y="1" width="9" height="9" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+                {ckDone === ckTotal && <path d="M3 5.5l2 2 3.2-3.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>}
+              </svg>
+              {ckDone}/{ckTotal}
+            </div>
+          )}
+        </article>
+      );
+    }
+
+    function AddForm({ onAdd, onCancel }) {
+      const [title, setTitle] = useState('');
+      const [notes, setNotes] = useState('');
+      const ref = useRef(null);
+      useEffect(() => { ref.current?.focus(); }, []);
+
+      const submit = () => onAdd(title, notes);
+
+      return (
+        <div className="add-form" role="form" aria-label="New card">
+          <input
+            ref={ref}
+            className="field-input"
+            placeholder="Card title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+            aria-label="Card title"
+          />
+          <textarea
+            className="field-input"
+            placeholder="Notes (optional)"
+            rows={2}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') onCancel(); }}
+            aria-label="Notes"
+          />
+          <div className="form-actions">
+            <button className="btn-primary" onClick={submit}>Add card</button>
+            <button className="btn-ghost-sm" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── EditModal ─── */
+    function EditModal({ card, colId, columns, labels, onUpdate, onDelete, onClose }) {
+      const colDef = columns.find(c => c.id === colId);
+      const [title, setTitle] = useState(card.title);
+      const [notes, setNotes] = useState(card.notes);
+      const [notesEditing, setNotesEditing] = useState(false);
+      const [attachDragOver, setAttachDragOver] = useState(false);
+      const [attachmentUrls, setAttachmentUrls] = useState({});
+      const [newItem, setNewItem] = useState('');
+      const [ckDraggingId, setCkDraggingId] = useState(null);
+      const [ckDropIdx, setCkDropIdx] = useState(null);
+      const modalRef = useRef(null);
+      const pointerDownStartedInsideRef = useRef(false);
+      const pointerDownHadEditorRef = useRef(false);
+      const titleRef = useRef(null);
+      const notesRef = useRef(null);
+      const newItemRef = useRef(null);
+      const ckListRef = useRef(null);
+      const ckDragRef = useRef(null);
+      const ckDropIdxRef = useRef(null);
+      const focusNewItemRef = useRef(false);
+      const attachmentUrlRef = useRef({});
+
+      useEffect(() => { setTitle(card.title); }, [card.id]);
+      useEffect(() => { setNotes(card.notes); }, [card.id]);
+      useEffect(() => { setNotesEditing(false); }, [card.id]);
+
+      useEffect(() => {
+        let cancelled = false;
+        const previous = attachmentUrlRef.current;
+        (async () => {
+          const next = {};
+          const currentIds = new Set((card.attachments || []).map(att => att.id));
+          for (const att of (card.attachments || [])) {
+            if (previous[att.id]) {
+              next[att.id] = previous[att.id];
+              continue;
+            }
+            if (!att.type?.startsWith('image/')) continue;
+            if (!att.hasHandle) continue;
+            try {
+              const handle = await idbGet(`att:${att.id}`);
+              const file = await handle?.getFile?.();
+              if (!file || cancelled) continue;
+              const url = URL.createObjectURL(file);
+              next[att.id] = url;
+            } catch {}
+          }
+          if (cancelled) {
+            Object.values(next).forEach(url => URL.revokeObjectURL(url));
+            return;
+          }
+          Object.entries(previous).forEach(([id, url]) => {
+            if (!currentIds.has(id) || next[id] !== url) URL.revokeObjectURL(url);
+          });
+          attachmentUrlRef.current = next;
+          setAttachmentUrls(next);
+        })();
+        return () => {
+          cancelled = true;
+        };
+      }, [card.id, card.attachments]);
+
+      useEffect(() => () => {
+        Object.values(attachmentUrlRef.current).forEach(url => URL.revokeObjectURL(url));
+        attachmentUrlRef.current = {};
+      }, []);
+
+      useEffect(() => {
+        const onKey = e => { if (e.key === 'Escape') onClose(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      }, [onClose]);
+
+      useEffect(() => {
+        if (!focusNewItemRef.current) return;
+        focusNewItemRef.current = false;
+        newItemRef.current?.focus();
+      }, [card.checklist.length]);
+      useEffect(() => {
+        if (notesEditing) notesRef.current?.focus();
+      }, [notesEditing]);
+
+      const persistTitle = () => {
+        const t = title.trim();
+        if (t && t !== card.title) onUpdate({ title: t });
+        else if (!t) setTitle(card.title);
+      };
+      const persistNotes = () => {
+        if (notes !== card.notes) onUpdate({ notes });
+        setNotesEditing(false);
+      };
+
+      const addAttachmentFiles = async (entries) => {
+        const added = [];
+        for (const entry of entries) {
+          try {
+            const handle = entry.handle || null;
+            const file = entry.file || await handle?.getFile?.();
+            if (!file) continue;
+            const id = uid('att');
+            if (handle) {
+              try {
+                await idbSet(`att:${id}`, handle);
+              } catch (err) {
+                console.warn('Could not remember attachment handle', err);
+              }
+            }
+            const url = URL.createObjectURL(file);
+            attachmentUrlRef.current = { ...attachmentUrlRef.current, [id]: url };
+            setAttachmentUrls(prev => ({ ...prev, [id]: url }));
+            added.push({
+              id,
+              name: file.name || 'Attachment',
+              type: file.type || '',
+              size: file.size || 0,
+              lastModified: file.lastModified || 0,
+              hasHandle: !!handle,
+            });
+          } catch (err) {
+            console.warn('Could not attach file', err);
+          }
+        }
+        if (added.length) {
+          onUpdate({ attachments: [...(card.attachments || []), ...added] });
+        }
+      };
+
+      const handleAttachmentDrop = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setAttachDragOver(false);
+        const entries = [];
+        const items = Array.from(e.dataTransfer?.items || []);
+        if (items.length) {
+          for (const item of items) {
+            if (item.kind !== 'file') continue;
+            let handle = null;
+            try { handle = await item.getAsFileSystemHandle?.(); } catch {}
+            if (handle?.kind && handle.kind !== 'file') continue;
+            entries.push({ handle, file: handle ? null : item.getAsFile() });
+          }
+        } else {
+          entries.push(...Array.from(e.dataTransfer?.files || []).map(file => ({ file })));
+        }
+        addAttachmentFiles(entries);
+      };
+
+      const chooseAttachments = async () => {
+        if ('showOpenFilePicker' in window) {
+          try {
+            const handles = await window.showOpenFilePicker({ multiple: true });
+            addAttachmentFiles(handles.map(handle => ({ handle })));
+            return;
+          } catch (err) {
+            if (err?.name === 'AbortError') return;
+            console.warn('Attachment picker failed', err);
+          }
+        }
+        alert('Drag files onto the attachment box to attach them.');
+      };
+
+      const openAttachment = async (att) => {
+        try {
+          let url = attachmentUrls[att.id];
+          let isTempUrl = false;
+          if (!url && att.hasHandle) {
+            const handle = await idbGet(`att:${att.id}`);
+            const file = await handle?.getFile?.();
+            if (file) {
+              url = URL.createObjectURL(file);
+              isTempUrl = true;
+            }
+          }
+          if (url) {
+            const canPreview =
+              att.type?.startsWith('image/') ||
+              att.type === 'application/pdf' ||
+              att.type?.startsWith('text/');
+            if (canPreview) {
+              const opened = window.open(url, '_blank', 'noopener');
+              if (!opened) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = att.name || 'attachment';
+                a.click();
+              }
+            } else {
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = att.name || 'attachment';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+            }
+            if (isTempUrl) setTimeout(() => URL.revokeObjectURL(url), 10000);
+          } else {
+            alert('This attachment needs to be re-added on this browser.');
+          }
+        } catch {
+          alert('Could not open this attachment. Try re-adding it.');
+        }
+      };
+
+      const removeAttachment = (att) => {
+        const url = attachmentUrlRef.current[att.id];
+        if (url) URL.revokeObjectURL(url);
+        const nextUrls = { ...attachmentUrlRef.current };
+        delete nextUrls[att.id];
+        attachmentUrlRef.current = nextUrls;
+        setAttachmentUrls(nextUrls);
+        idbDelete(`att:${att.id}`).catch(() => {});
+        onUpdate({ attachments: (card.attachments || []).filter(a => a.id !== att.id) });
+      };
+
+      const toggleLabel = (labelId) => {
+        const has = (card.labels || []).includes(labelId);
+        const next = has ? card.labels.filter(l => l !== labelId) : [...(card.labels || []), labelId];
+        onUpdate({ labels: next });
+      };
+
+      const updateItem = (itemId, patch) => {
+        onUpdate({ checklist: card.checklist.map(it => it.id === itemId ? { ...it, ...patch } : it) });
+      };
+      const removeItem = (itemId) => {
+        onUpdate({ checklist: card.checklist.filter(it => it.id !== itemId) });
+      };
+      const addItem = (text) => {
+        const t = (text || '').trim();
+        if (!t) return;
+        focusNewItemRef.current = true;
+        onUpdate({ checklist: [...(card.checklist || []), { id: uid('ck'), text: t, done: false }] });
+        setNewItem('');
+      };
+
+      const moveChecklistItem = (itemId, insertIdx) => {
+        const list = [...(card.checklist || [])];
+        const fromIdx = list.findIndex(it => it.id === itemId);
+        if (fromIdx < 0 || insertIdx === fromIdx || insertIdx === fromIdx + 1) return;
+        const [moved] = list.splice(fromIdx, 1);
+        const adjustedIdx = insertIdx > fromIdx ? insertIdx - 1 : insertIdx;
+        list.splice(Math.max(0, adjustedIdx), 0, moved);
+        onUpdate({ checklist: list });
+      };
+
+      const checklistInsertIndex = (container, clientY) => {
+        const rows = Array.from(container.querySelectorAll('.ck-edit-row[data-item-id]'));
+        let insertIdx = rows.length;
+        for (const row of rows) {
+          if (row.dataset.itemId === ckDragRef.current?.itemId) continue;
+          const rect = row.getBoundingClientRect();
+          const idx = +row.dataset.idx;
+          if (clientY <= rect.top + rect.height / 2) {
+            insertIdx = idx;
+            break;
+          }
+        }
+        return insertIdx;
+      };
+
+      const setChecklistDropIndex = (idx) => {
+        ckDropIdxRef.current = idx;
+        setCkDropIdx(cur => cur === idx ? cur : idx);
+      };
+
+      const onChecklistDragStart = (e, itemId, idx) => {
+        ckDragRef.current = { itemId, idx };
+        setCkDraggingId(itemId);
+        setChecklistDropIndex(idx);
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', itemId); } catch {}
+      };
+
+      const onChecklistDragOver = (e) => {
+        if (!ckDragRef.current) return;
+        e.preventDefault();
+        const idx = checklistInsertIndex(e.currentTarget, e.clientY);
+        setChecklistDropIndex(idx);
+      };
+
+      const clearChecklistDrag = () => {
+        removeChecklistPointerListeners();
+        ckDragRef.current = null;
+        ckDropIdxRef.current = null;
+        setCkDraggingId(null);
+        setCkDropIdx(null);
+      };
+
+      const onChecklistDrop = (e) => {
+        e.preventDefault();
+        if (ckDragRef.current && ckDropIdxRef.current !== null) {
+          moveChecklistItem(ckDragRef.current.itemId, ckDropIdxRef.current);
+        }
+        clearChecklistDrag();
+      };
+
+      const addChecklistPointerListeners = () => {
+        removeChecklistPointerListeners();
+        window.addEventListener('pointermove', onChecklistWindowPointerMove, true);
+        window.addEventListener('pointerup', onChecklistWindowPointerUp, true);
+        window.addEventListener('pointercancel', onChecklistWindowPointerCancel, true);
+        window.addEventListener('keydown', onChecklistWindowKeyDown, true);
+        window.addEventListener('blur', clearChecklistDrag, true);
+      };
+
+      const removeChecklistPointerListeners = () => {
+        window.removeEventListener('pointermove', onChecklistWindowPointerMove, true);
+        window.removeEventListener('pointerup', onChecklistWindowPointerUp, true);
+        window.removeEventListener('pointercancel', onChecklistWindowPointerCancel, true);
+        window.removeEventListener('keydown', onChecklistWindowKeyDown, true);
+        window.removeEventListener('blur', clearChecklistDrag, true);
+      };
+
+      const onChecklistWindowPointerMove = (e) => onChecklistPointerMove(e);
+      const onChecklistWindowPointerUp = (e) => onChecklistPointerUp(e);
+      const onChecklistWindowPointerCancel = () => clearChecklistDrag();
+      const onChecklistWindowKeyDown = (e) => {
+        if (e.key === 'Escape') clearChecklistDrag();
+      };
+
+      const onChecklistPointerDown = (e, itemId, idx) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        ckDragRef.current = {
+          pointerId: e.pointerId,
+          sourceEl: e.currentTarget,
+          itemId,
+          idx,
+          startX: e.clientX,
+          startY: e.clientY,
+          dragging: false,
+        };
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+        addChecklistPointerListeners();
+      };
+
+      const onChecklistPointerMove = (e) => {
+        const d = ckDragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        if (d.dragging && e.buttons === 0) {
+          clearChecklistDrag();
+          return false;
+        }
+
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!d.dragging && Math.hypot(dx, dy) < 4) return false;
+
+        e.preventDefault();
+        if (!d.dragging) {
+          d.dragging = true;
+          setCkDraggingId(d.itemId);
+          setChecklistDropIndex(d.idx);
+        }
+
+        if (ckListRef.current) {
+          const idx = checklistInsertIndex(ckListRef.current, e.clientY);
+          setChecklistDropIndex(idx);
+        }
+        return true;
+      };
+
+      const onChecklistPointerUp = (e) => {
+        const d = ckDragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        try { d.sourceEl?.releasePointerCapture(e.pointerId); } catch {}
+        if (d.dragging && ckDropIdxRef.current !== null) {
+          e.preventDefault();
+          moveChecklistItem(d.itemId, ckDropIdxRef.current);
+        }
+        clearChecklistDrag();
+        return !!d.dragging;
+      };
+
+      const ckTotal = card.checklist.length;
+      const ckDone  = card.checklist.filter(i => i.done).length;
+
+      const isEditableEl = (el) =>
+        el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+
+      const hasActiveTextSelection = () => {
+        const active = document.activeElement;
+        if (isEditableEl(active) && typeof active.selectionStart === 'number') {
+          return active.selectionStart !== active.selectionEnd;
+        }
+        const selection = window.getSelection?.();
+        return !!selection && !selection.isCollapsed;
+      };
+
+      const blurActiveEditor = () => {
+        const active = document.activeElement;
+        if (isEditableEl(active)) active.blur();
+        window.getSelection?.().removeAllRanges();
+      };
+
+      const handleOverlayMouseDown = (e) => {
+        const active = document.activeElement;
+        pointerDownStartedInsideRef.current = e.target !== e.currentTarget;
+        pointerDownHadEditorRef.current =
+          e.target === e.currentTarget &&
+          modalRef.current?.contains(active) &&
+          isEditableEl(active);
+      };
+
+      const handleOverlayClick = (e) => {
+        if (e.target !== e.currentTarget) return;
+        const active = document.activeElement;
+        const activeEditorInModal = modalRef.current?.contains(active) && isEditableEl(active);
+        if (pointerDownStartedInsideRef.current) {
+          pointerDownStartedInsideRef.current = false;
+          pointerDownHadEditorRef.current = false;
+          return;
+        }
+        if (pointerDownHadEditorRef.current || activeEditorInModal || hasActiveTextSelection()) {
+          pointerDownStartedInsideRef.current = false;
+          pointerDownHadEditorRef.current = false;
+          blurActiveEditor();
+          return;
+        }
+        pointerDownHadEditorRef.current = false;
+        onClose();
+      };
+
+      return (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Edit card" onMouseDown={handleOverlayMouseDown} onClick={handleOverlayClick}>
+          <div className="modal" ref={modalRef}>
+            <div className="modal-hd">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h2 className="modal-hd-title">Edit card</h2>
+                <span className="col-pill" style={{ background: colDef.color }}>{colDef.label}</span>
+              </div>
+              <button className="modal-close" onClick={onClose} aria-label="Close dialog">✕</button>
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="m-title">Title</label>
+              <div className="field-row">
+                <button
+                  type="button"
+                  className={`ck-box${card.complete ? ' done' : ''}`}
+                  onClick={() => onUpdate({ complete: !card.complete })}
+                  aria-pressed={!!card.complete}
+                  aria-label={card.complete ? 'Mark card incomplete' : 'Mark card complete'}
+                  title={card.complete ? 'Mark incomplete' : 'Mark complete'}
+                >
+                  {card.complete && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M1.5 5l2.2 2.2L8.5 2.4" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
+                <input
+                  id="m-title"
+                  ref={titleRef}
+                  className="field-input"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onBlur={persistTitle}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); persistTitle(); } }}
+                  aria-required="true"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="m-due">Deadline</label>
+              <div className="due-field-row">
+                <input
+                  id="m-due"
+                  type="date"
+                  className="field-input"
+                  value={card.due || ''}
+                  onChange={e => onUpdate({ due: e.target.value })}
+                  aria-label="Deadline date"
+                />
+                {card.due && (
+                  <>
+                    <span className={`due-pill ${dueStatus(card)}`}>
+                      {formatDueDate(card.due)}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-ghost-sm"
+                      onClick={() => onUpdate({ due: '' })}
+                    >Clear</button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="field-label">Labels</label>
+              <div className="label-pills">
+                {labels.map(lab => {
+                  const on = (card.labels || []).includes(lab.id);
+                  return (
+                    <button
+                      key={lab.id}
+                      type="button"
+                      className={`label-pill btn${on ? '' : ' off'}`}
+                      style={{ background: lab.color }}
+                      onClick={() => toggleLabel(lab.id)}
+                      aria-pressed={on}
+                    >{lab.name}</button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="field-label" htmlFor="m-notes">
+                Notes <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text-3)' }}>· links auto-detected</span>
+              </label>
+              {!notesEditing && (
+                <div
+                  id="m-notes"
+                  className={`notes-preview${notes ? '' : ' empty'}`}
+                  tabIndex={0}
+                  onClick={() => setNotesEditing(true)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setNotesEditing(true);
+                    }
+                  }}
+                  aria-label="Notes"
+                  title="Click to edit notes"
+                >
+                  {notes ? formatNotes(notes) : 'Add notes...'}
+                </div>
+              )}
+              {notesEditing && (
+              <textarea
+                id="m-notes"
+                ref={notesRef}
+                className="field-input notes-input"
+                rows={5}
+                placeholder="Add notes…"
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                onBlur={persistNotes}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setNotes(card.notes);
+                    setNotesEditing(false);
+                  }
+                }}
+                style={{ resize: 'vertical' }}
+              />
+              )}
+            </div>
+
+            <div>
+              <label className="field-label">
+                Attachments <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text-3)' }}>local to this browser</span>
+              </label>
+              <div className="attachments">
+                <div
+                  className={`attach-drop${attachDragOver ? ' drag-over' : ''}`}
+                  onDragEnter={e => { e.preventDefault(); setAttachDragOver(true); }}
+                  onDragOver={e => { e.preventDefault(); setAttachDragOver(true); }}
+                  onDragLeave={e => { if (e.currentTarget === e.target) setAttachDragOver(false); }}
+                  onDrop={handleAttachmentDrop}
+                >
+                  Drop files here or <button type="button" className="attachment-action" onClick={chooseAttachments}>choose files</button>
+                </div>
+                {(card.attachments || []).length > 0 && (
+                  <div className="attachment-list">
+                    {(card.attachments || []).map(att => (
+                      <div className="attachment-row" key={att.id}>
+                        <div className="attachment-thumb" aria-hidden="true">
+                          {att.type?.startsWith('image/') && attachmentUrls[att.id] ? (
+                            <img src={attachmentUrls[att.id]} alt="" />
+                          ) : (
+                            <span>{att.type?.startsWith('text/') ? 'TXT' : 'FILE'}</span>
+                          )}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="attachment-name" title={att.name}>{att.name}</div>
+                          <div className="attachment-meta">
+                            {[att.type || 'file', formatBytes(att.size), att.hasHandle ? 'linked' : 'session only'].filter(Boolean).join(' / ')}
+                          </div>
+                        </div>
+                        <button type="button" className="attachment-action" onClick={() => openAttachment(att)}>Open</button>
+                        <button type="button" className="attachment-action danger" onClick={() => removeAttachment(att)} aria-label={`Remove ${att.name}`}>Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="field-label">
+                Checklist {ckTotal > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text-3)' }}>· {ckDone}/{ckTotal} done</span>}
+              </label>
+              <div
+                className="ck-edit"
+                ref={ckListRef}
+              >
+                {card.checklist.map((item, idx) => (
+                  <ChecklistEditRow
+                    key={item.id}
+                    item={item}
+                    idx={idx}
+                    isDragging={ckDraggingId === item.id}
+                    dropBefore={ckDraggingId && ckDraggingId !== item.id && ckDropIdx === idx}
+                    dropAfter={ckDraggingId && ckDropIdx === card.checklist.length && idx === card.checklist.length - 1}
+                    onPointerDown={(e) => onChecklistPointerDown(e, item.id, idx)}
+                    onToggle={() => updateItem(item.id, { done: !item.done })}
+                    onText={(text) => updateItem(item.id, { text })}
+                    onRemove={() => removeItem(item.id)}
+                  />
+                ))}
+                <div className="ck-edit-row">
+                  <span
+                    className="ck-drag-handle"
+                    style={{ visibility: 'hidden' }}
+                    aria-hidden="true"
+                  ></span>
+                  <button
+                    type="button"
+                    className="ck-box"
+                    style={{ visibility: 'hidden' }}
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  ></button>
+                  <input
+                    ref={newItemRef}
+                    className="field-input"
+                    placeholder="Add an item — Enter to save"
+                    value={newItem}
+                    onChange={e => setNewItem(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); addItem(newItem); }
+                      if (e.key === 'Escape') setNewItem('');
+                    }}
+                    aria-label="New checklist item"
+                  />
+                  <button
+                    type="button"
+                    className="ck-add"
+                    onClick={() => addItem(newItem)}
+                    disabled={!newItem.trim()}
+                    style={!newItem.trim() ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                  >Add</button>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn-danger"
+                onClick={() => { if (window.confirm('Delete this card?')) onDelete(); }}
+              >Delete</button>
+              <div className="modal-footer-right">
+                <button className="btn-primary" onClick={onClose}>Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── ChecklistEditRow ─── */
+    function ChecklistEditRow({ item, idx, isDragging, dropBefore, dropAfter, onPointerDown, onToggle, onText, onRemove }) {
+      const [text, setText] = useState(item.text);
+      useEffect(() => { setText(item.text); }, [item.id, item.text]);
+
+      const persist = () => { if (text !== item.text) onText(text); };
+      const rowClass = [
+        'ck-edit-row',
+        isDragging ? 'dragging' : '',
+        dropBefore ? 'drop-before' : '',
+        dropAfter ? 'drop-after' : '',
+      ].filter(Boolean).join(' ');
+
+      return (
+        <div className={rowClass} data-item-id={item.id} data-idx={idx}>
+          <button
+            type="button"
+            className="ck-drag-handle"
+            onPointerDown={onPointerDown}
+            aria-label="Drag checklist item"
+            title="Drag to reorder"
+          >
+            <svg width="12" height="16" viewBox="0 0 12 16" fill="none" aria-hidden="true">
+              <circle cx="4" cy="4" r="1.2" fill="currentColor"/>
+              <circle cx="8" cy="4" r="1.2" fill="currentColor"/>
+              <circle cx="4" cy="8" r="1.2" fill="currentColor"/>
+              <circle cx="8" cy="8" r="1.2" fill="currentColor"/>
+              <circle cx="4" cy="12" r="1.2" fill="currentColor"/>
+              <circle cx="8" cy="12" r="1.2" fill="currentColor"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`ck-box${item.done ? ' done' : ''}`}
+            onClick={onToggle}
+            aria-pressed={item.done}
+            aria-label={item.done ? 'Mark not done' : 'Mark done'}
+          >
+            {item.done && (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M1.5 5l2.2 2.2L8.5 2.4" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            )}
+          </button>
+          <input
+            className={`field-input${item.done ? ' done' : ''}`}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onBlur={persist}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); persist(); e.target.blur(); }
+            }}
+            aria-label="Checklist item"
+          />
+          <button
+            type="button"
+            className="ck-remove"
+            onClick={onRemove}
+            aria-label="Remove item"
+            title="Remove"
+          >✕</button>
+        </div>
+      );
+    }
+
+    /* ─── LabelManager ─── */
+    function LabelManager({ labels, onSave, onClose }) {
+      const [draft, setDraft] = useState(labels);
+      const [draggingId, setDraggingId] = useState(null);
+      const [dropIdx, setDropIdx] = useState(null);
+      const listRef = useRef(null);
+      const dragRef = useRef(null);
+      const dropIdxRef = useRef(null);
+
+      // sync from external changes (e.g., card label removal cleanup)
+      useEffect(() => { setDraft(labels); }, [labels]);
+
+      const change = (id, patch) => {
+        const next = draft.map(l => l.id === id ? { ...l, ...patch } : l);
+        setDraft(next);
+        onSave(next);
+      };
+
+      const remove = (id) => {
+        const lab = draft.find(l => l.id === id);
+        if (!lab) return;
+        if (!window.confirm(`Remove "${lab.name}"? It will be removed from every card.`)) return;
+        const next = draft.filter(l => l.id !== id);
+        setDraft(next);
+        onSave(next);
+      };
+
+      const add = () => {
+        const next = [...draft, { id: uid('lab'), name: 'New label', color: '#888888' }];
+        setDraft(next);
+        onSave(next);
+      };
+
+      const moveLabel = (labelId, insertIdx) => {
+        const list = [...draft];
+        const fromIdx = list.findIndex(l => l.id === labelId);
+        if (fromIdx < 0 || insertIdx === fromIdx || insertIdx === fromIdx + 1) return;
+        const [moved] = list.splice(fromIdx, 1);
+        const adjustedIdx = insertIdx > fromIdx ? insertIdx - 1 : insertIdx;
+        list.splice(Math.max(0, adjustedIdx), 0, moved);
+        setDraft(list);
+        onSave(list);
+      };
+
+      const labelInsertIndex = (container, clientY) => {
+        const rows = Array.from(container.querySelectorAll('.lab-mgr-row[data-label-id]'));
+        let insertIdx = rows.length;
+        for (const row of rows) {
+          if (row.dataset.labelId === dragRef.current?.labelId) continue;
+          const rect = row.getBoundingClientRect();
+          const idx = +row.dataset.idx;
+          if (clientY <= rect.top + rect.height / 2) {
+            insertIdx = idx;
+            break;
+          }
+        }
+        return insertIdx;
+      };
+
+      const setLabelDropIndex = (idx) => {
+        dropIdxRef.current = idx;
+        setDropIdx(cur => cur === idx ? cur : idx);
+      };
+
+      const clearLabelDrag = () => {
+        removeLabelPointerListeners();
+        dragRef.current = null;
+        dropIdxRef.current = null;
+        setDraggingId(null);
+        setDropIdx(null);
+      };
+
+      const addLabelPointerListeners = () => {
+        removeLabelPointerListeners();
+        window.addEventListener('pointermove', onLabelWindowPointerMove, true);
+        window.addEventListener('pointerup', onLabelWindowPointerUp, true);
+        window.addEventListener('pointercancel', onLabelWindowPointerCancel, true);
+        window.addEventListener('keydown', onLabelWindowKeyDown, true);
+        window.addEventListener('blur', clearLabelDrag, true);
+      };
+
+      const removeLabelPointerListeners = () => {
+        window.removeEventListener('pointermove', onLabelWindowPointerMove, true);
+        window.removeEventListener('pointerup', onLabelWindowPointerUp, true);
+        window.removeEventListener('pointercancel', onLabelWindowPointerCancel, true);
+        window.removeEventListener('keydown', onLabelWindowKeyDown, true);
+        window.removeEventListener('blur', clearLabelDrag, true);
+      };
+
+      const onLabelWindowPointerMove = (e) => onLabelPointerMove(e);
+      const onLabelWindowPointerUp = (e) => onLabelPointerUp(e);
+      const onLabelWindowPointerCancel = () => clearLabelDrag();
+      const onLabelWindowKeyDown = (e) => {
+        if (e.key === 'Escape') clearLabelDrag();
+      };
+
+      const onLabelPointerDown = (e, labelId, idx) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        dragRef.current = {
+          pointerId: e.pointerId,
+          sourceEl: e.currentTarget,
+          labelId,
+          idx,
+          startX: e.clientX,
+          startY: e.clientY,
+          dragging: false,
+        };
+        try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
+        addLabelPointerListeners();
+      };
+
+      const onLabelPointerMove = (e) => {
+        const d = dragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        if (d.dragging && e.buttons === 0) {
+          clearLabelDrag();
+          return false;
+        }
+
+        const dx = e.clientX - d.startX;
+        const dy = e.clientY - d.startY;
+        if (!d.dragging && Math.hypot(dx, dy) < 4) return false;
+
+        e.preventDefault();
+        if (!d.dragging) {
+          d.dragging = true;
+          setDraggingId(d.labelId);
+          setLabelDropIndex(d.idx);
+        }
+
+        if (listRef.current) {
+          const idx = labelInsertIndex(listRef.current, e.clientY);
+          setLabelDropIndex(idx);
+        }
+        return true;
+      };
+
+      const onLabelPointerUp = (e) => {
+        const d = dragRef.current;
+        if (!d || d.pointerId !== e.pointerId) return false;
+        try { d.sourceEl?.releasePointerCapture(e.pointerId); } catch {}
+        if (d.dragging && dropIdxRef.current !== null) {
+          e.preventDefault();
+          moveLabel(d.labelId, dropIdxRef.current);
+        }
+        clearLabelDrag();
+        return !!d.dragging;
+      };
+
+      useEffect(() => () => removeLabelPointerListeners(), []);
+
+      return (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Manage labels" onClick={e => e.target === e.currentTarget && onClose()}>
+          <div className="modal" style={{ width: 600 }}>
+            <div className="modal-hd">
+              <h2 className="modal-hd-title">Manage labels</h2>
+              <button className="modal-close" onClick={onClose} aria-label="Close dialog">✕</button>
+            </div>
+
+            <div className="lab-mgr-list" ref={listRef}>
+              {draft.map((l, idx) => (
+                <LabelManagerRow
+                  key={l.id}
+                  label={l}
+                  idx={idx}
+                  isDragging={draggingId === l.id}
+                  dropBefore={draggingId && draggingId !== l.id && dropIdx === idx}
+                  dropAfter={draggingId && dropIdx === draft.length && idx === draft.length - 1}
+                  onPointerDown={(e) => onLabelPointerDown(e, l.id, idx)}
+                  onChange={(patch) => change(l.id, patch)}
+                  onRemove={() => remove(l.id)}
+                />
+              ))}
+            </div>
+
+            <button className="ck-add" onClick={add}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                <path d="M5.5 1v9M1 5.5h9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+              </svg>
+              Add label
+            </button>
+
+            <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <button className="btn-primary" onClick={onClose}>Done</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ─── LabelManagerRow ─── */
+    function LabelManagerRow({ label, idx, isDragging, dropBefore, dropAfter, onPointerDown, onChange, onRemove }) {
+      const [hex, setHex] = useState(() => colorToHex(label.color));
+      const [hexValid, setHexValid] = useState(true);
+
+      useEffect(() => { setHex(colorToHex(label.color)); setHexValid(true); }, [label.id, label.color]);
+
+      const onPicker = (e) => {
+        const v = e.target.value.toLowerCase();
+        setHex(v);
+        setHexValid(true);
+        onChange({ color: v });
+      };
+
+      const onHexInput = (e) => {
+        let v = e.target.value;
+        if (v && !v.startsWith('#')) v = '#' + v;
+        setHex(v);
+        if (HEX_RE.test(v)) {
+          setHexValid(true);
+          onChange({ color: v.toLowerCase() });
+        } else {
+          setHexValid(false);
+        }
+      };
+
+      const onName = (e) => onChange({ name: e.target.value });
+
+      const rowClass = [
+        'lab-mgr-row',
+        isDragging ? 'dragging' : '',
+        dropBefore ? 'drop-before' : '',
+        dropAfter ? 'drop-after' : '',
+      ].filter(Boolean).join(' ');
+
+      return (
+        <div className={rowClass} data-label-id={label.id} data-idx={idx}>
+          <button
+            type="button"
+            className="ck-drag-handle"
+            onPointerDown={onPointerDown}
+            aria-label={`Drag label ${label.name}`}
+            title="Drag to reorder"
+          >
+            <svg width="12" height="18" viewBox="0 0 12 18" aria-hidden="true">
+              <circle cx="3" cy="4" r="1.35" fill="currentColor"/>
+              <circle cx="9" cy="4" r="1.35" fill="currentColor"/>
+              <circle cx="3" cy="9" r="1.35" fill="currentColor"/>
+              <circle cx="9" cy="9" r="1.35" fill="currentColor"/>
+              <circle cx="3" cy="14" r="1.35" fill="currentColor"/>
+              <circle cx="9" cy="14" r="1.35" fill="currentColor"/>
+            </svg>
+          </button>
+          <input
+            type="color"
+            className="lab-mgr-color"
+            value={HEX_RE.test(hex) ? hex : '#888888'}
+            onChange={onPicker}
+            aria-label={`Color for ${label.name}`}
+            title="Pick color"
+          />
+          <input
+            className={`field-input lab-mgr-hex${hexValid ? '' : ' invalid'}`}
+            value={hex}
+            onChange={onHexInput}
+            placeholder="#RRGGBB"
+            spellCheck={false}
+            aria-label="Hex color"
+          />
+          <input
+            className="field-input lab-mgr-name"
+            value={label.name}
+            onChange={onName}
+            placeholder="Label name"
+            aria-label="Label name"
+          />
+          <span
+            className="label-pill"
+            style={{ background: HEX_RE.test(hex) ? hex : label.color, padding: '4px 11px', fontSize: '11.5px' }}
+          >{label.name || ' '}</span>
+          <button
+            type="button"
+            className="ck-remove"
+            onClick={onRemove}
+            aria-label={`Remove label ${label.name}`}
+            title="Remove label"
+          >✕</button>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

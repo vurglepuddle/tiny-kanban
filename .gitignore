@@ -1,0 +1,9 @@
+# Local board data and backups
+*.json
+
+# Old local design notes
+CLAUDE.md
+
+# OS/editor noise
+Thumbs.db
+.DS_Store
