@@ -1678,6 +1678,20 @@
       });
     }
 
+    async function idbKeys(prefix = '') {
+      const db = await openBackupDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('handles', 'readonly');
+        const req = tx.objectStore('handles').getAllKeys();
+        req.onsuccess = () => {
+          const keys = (req.result || []).map(String);
+          resolve(prefix ? keys.filter(key => key.startsWith(prefix)) : keys);
+        };
+        req.onerror = () => reject(req.error);
+        tx.oncomplete = () => db.close();
+      });
+    }
+
     async function verifyWritePermission(handle, ask = false) {
       if (!handle) return false;
       const opts = { mode: 'readwrite' };
@@ -1730,6 +1744,33 @@
       useEffect(() => {
         document.title = board.title || 'Kanban';
       }, [board.title]);
+
+      useEffect(() => {
+        let cancelled = false;
+        const liveAttachmentKeys = new Set();
+        Object.values(board.cards || {}).forEach(cards => {
+          (cards || []).forEach(card => {
+            (card.attachments || []).forEach(att => {
+              if (att?.id) liveAttachmentKeys.add(`att:${att.id}`);
+            });
+          });
+        });
+
+        (async () => {
+          try {
+            const keys = await idbKeys('att:');
+            if (cancelled) return;
+            await Promise.all(
+              keys
+                .filter(key => !liveAttachmentKeys.has(key))
+                .map(key => idbDelete(key))
+            );
+          } catch (err) {
+            console.warn('Could not clear stale attachment handles', err);
+          }
+        })();
+        return () => { cancelled = true; };
+      }, [board.cards]);
 
       useEffect(() => {
         let cancelled = false;
