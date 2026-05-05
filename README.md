@@ -20,6 +20,12 @@ The board autosaves to browser `localStorage`. For safer storage, use `Backup > 
 
 Local attachments are browser-local file handles. Exported JSON keeps attachment metadata, but another browser or machine may need files re-added.
 
+## Permissions
+
+Auto Backup uses the browser's local file access features. Chrome or Edge may ask for permission to edit the chosen JSON file, and folder-based backup may ask for access to the backup folder so Tiny Kanban can update the live backup and previous copy.
+
+Auto Backup is optional. If you do not want to grant extra file permissions, the board still autosaves in the browser and manual import/export still works.
+
 ## Files
 
 - `Kanban.html` - the app
