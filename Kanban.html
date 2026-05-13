@@ -76,7 +76,7 @@
 
     .topbar, .column, .card, .modal, .overlay,
     .add-btn, .field-input, .tbtn, .icon-btn,
-    .col-count, .modal-close, .btn-ghost-sm,
+    .col-count, .col-sort-due, .modal-close, .btn-ghost-sm,
     .drop-placeholder, .save-badge-dot {
       transition: background-color 0.35s ease, color 0.35s ease,
                   border-color 0.35s ease, box-shadow 0.35s ease;
@@ -470,6 +470,31 @@
       font-variant-numeric: tabular-nums;
     }
     .dark .col-count { background: oklch(0.27 0.013 65); }
+    .col-sort-due {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      color: var(--text-3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.72;
+      flex-shrink: 0;
+      transition: opacity 0.13s, background 0.12s, color 0.12s;
+    }
+    .column:hover .col-sort-due { opacity: 1; }
+    .col-sort-due:hover {
+      background: var(--accent-bg);
+      color: var(--accent);
+    }
+    .col-sort-due:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      opacity: 1;
+    }
     .col-delete {
       width: 24px; height: 24px;
       border: none;
@@ -1468,6 +1493,23 @@
       return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
+    function sortCardsByDueList(cards, dir) {
+      return [...(cards || [])]
+        .map((card, idx) => ({ card, idx }))
+        .sort((a, b) => {
+          const ad = a.card.due || '';
+          const bd = b.card.due || '';
+          if (ad && bd) {
+            const cmp = ad.localeCompare(bd);
+            return (dir === 'asc' ? cmp : -cmp) || (a.idx - b.idx);
+          }
+          if (ad && !bd) return dir === 'asc' ? -1 : 1;
+          if (!ad && bd) return dir === 'asc' ? 1 : -1;
+          return a.idx - b.idx;
+        })
+        .map(item => item.card);
+    }
+
     function formatBytes(bytes) {
       if (!bytes) return '';
       const units = ['B', 'KB', 'MB', 'GB'];
@@ -1710,6 +1752,7 @@
       const [filterIds, setFilterIds] = useState([]);          // active label-id filters (OR)
       const [labelMgrOpen, setLabelMgrOpen] = useState(false);
       const [nextDueSortDir, setNextDueSortDir] = useState('asc');
+      const [columnDueSortDirs, setColumnDueSortDirs] = useState({});
       const [backupStatus, setBackupStatus] = useState(() => {
         if (!supportsFileBackups()) return { kind: 'unsupported', text: 'manual export' };
         const meta = loadBackupMeta();
@@ -1963,23 +2006,22 @@
         commit(prev => {
           const cards = { ...prev.cards };
           prev.columns.forEach(col => {
-            cards[col.id] = [...(prev.cards[col.id] || [])]
-              .map((card, idx) => ({ card, idx }))
-              .sort((a, b) => {
-                const ad = a.card.due || '';
-                const bd = b.card.due || '';
-                if (ad && bd) {
-                  const cmp = ad.localeCompare(bd);
-                  return (dir === 'asc' ? cmp : -cmp) || (a.idx - b.idx);
-                }
-                if (ad && !bd) return dir === 'asc' ? -1 : 1;
-                if (!ad && bd) return dir === 'asc' ? 1 : -1;
-                return a.idx - b.idx;
-              })
-              .map(item => item.card);
+            cards[col.id] = sortCardsByDueList(prev.cards[col.id] || [], dir);
           });
           return { ...prev, cards };
         });
+      };
+
+      const sortColumnByDue = (colId) => {
+        const dir = columnDueSortDirs[colId] || 'asc';
+        setColumnDueSortDirs(prev => ({ ...prev, [colId]: dir === 'asc' ? 'desc' : 'asc' }));
+        commit(prev => ({
+          ...prev,
+          cards: {
+            ...prev.cards,
+            [colId]: sortCardsByDueList(prev.cards[colId] || [], dir),
+          },
+        }));
       };
 
       const renameBoard = (title) => {
@@ -2679,6 +2721,8 @@
                 onRename={renameColumn}
                 onColor={setColumnColor}
                 onDelete={deleteColumn}
+                onSortDue={sortColumnByDue}
+                dueSortDir={columnDueSortDirs[col.id] || 'asc'}
                 onToggleChecklistItem={toggleChecklistItem}
                 onToggleCardComplete={toggleCardComplete}
                 onToggleFilter={toggleFilter}
@@ -2921,7 +2965,8 @@
       onCardPointerDown, onCardPointerMove, onCardPointerUp, onCardPointerCancel,
       onColDragStart, onColDragOver, onColDragEnd,
       onEdit, onAdd, onStartAdd, onCancelAdd,
-      onRename, onColor, onDelete, onToggleChecklistItem, onToggleCardComplete, onToggleFilter,
+      onRename, onColor, onDelete, onSortDue, dueSortDir,
+      onToggleChecklistItem, onToggleCardComplete, onToggleFilter,
     }) {
       const isCardDropActive = dropTarget?.col === def.id;
       const adding = addingTo === def.id;
@@ -3043,6 +3088,22 @@
                 title="Click to rename"
               >{def.label}</h2>
             )}
+            <button
+              type="button"
+              className="col-sort-due no-drag"
+              onClick={e => { e.stopPropagation(); onSortDue(def.id); }}
+              onMouseDown={e => e.stopPropagation()}
+              aria-label={dueSortDir === 'asc' ? `Sort ${def.label} due dates earliest first` : `Sort ${def.label} due dates latest first`}
+              title={dueSortDir === 'asc' ? 'Sort this column earliest first' : 'Sort this column latest first'}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                {dueSortDir === 'asc' ? (
+                  <path d="M6 10V2.2M2.8 5.4L6 2.2l3.2 3.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                ) : (
+                  <path d="M6 2v7.8M2.8 6.6L6 9.8l3.2-3.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                )}
+              </svg>
+            </button>
             <span
               className="col-count"
               aria-label={filterSet.length > 0 ? `${visibleCount} of ${cards.length} visible` : `${cards.length} cards`}
