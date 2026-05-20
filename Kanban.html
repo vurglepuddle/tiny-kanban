@@ -3192,8 +3192,9 @@
       const checklist = card.checklist || [];
       const ckTotal = checklist.length;
       const ckDone  = checklist.filter(i => i.done).length;
-      const ckVisible = checklist.slice(0, 3);
-      const ckExtra = ckTotal - ckVisible.length;
+      const ckOpen = checklist.filter(i => !i.done);
+      const ckVisible = ckOpen.slice(0, 3);
+      const ckExtra = ckOpen.length - ckVisible.length;
       const dueState = dueStatus(card);
 
       const onCardClick = (e) => {
@@ -3291,7 +3292,7 @@
           {card.notes && <p className="card-notes">{linkify(card.notes)}</p>}
 
           {ckVisible.length > 0 && (
-            <div className="ck-mini" role="group" aria-label="Checklist">
+            <div className="ck-mini" role="group" aria-label="Open checklist items">
               {ckVisible.map(item => (
                 <div key={item.id} className={`ck-row${item.done ? ' done' : ''}`}>
                   <button
