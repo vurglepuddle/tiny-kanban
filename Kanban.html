@@ -2033,21 +2033,26 @@
       /* ── Card ops ── */
       const addCard = (colId, title, notes) => {
         if (!title.trim()) return;
+        const card = {
+          id: uid(), title: title.trim(), notes: notes.trim(),
+          labels: filterIds.length > 0 ? [...filterIds] : [],
+          due: '',
+          complete: false,
+          attachments: [],
+          checklist: [],
+        };
         commit(prev => ({
           ...prev,
           cards: {
             ...prev.cards,
-            [colId]: [...(prev.cards[colId] || []), {
-              id: uid(), title: title.trim(), notes: notes.trim(),
-              labels: filterIds.length > 0 ? [...filterIds] : [],
-              due: '',
-              complete: false,
-              attachments: [],
-              checklist: [],
-            }],
+            [colId]: [card, ...(prev.cards[colId] || [])],
           },
         }));
         setAddingTo(null);
+        requestAnimationFrame(() => {
+          const safeColId = window.CSS?.escape ? CSS.escape(colId) : colId;
+          document.querySelector(`.cards-area[data-col-id="${safeColId}"]`)?.scrollTo({ top: 0, behavior: 'smooth' });
+        });
       };
 
       const updateCard = (colId, cardId, patch) => {
