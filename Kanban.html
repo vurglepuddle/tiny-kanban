@@ -3445,6 +3445,7 @@
       const ckDragRef = useRef(null);
       const ckDropIdxRef = useRef(null);
       const focusNewItemRef = useRef(false);
+      const addingNewItemRef = useRef(false);
       const attachmentUrlRef = useRef({});
 
       useEffect(() => { setTitle(card.title); }, [card.id]);
@@ -3651,12 +3652,15 @@
       const removeItem = (itemId) => {
         onUpdate({ checklist: card.checklist.filter(it => it.id !== itemId) });
       };
-      const addItem = (text) => {
+      const addItem = (text, focusAfter = true) => {
+        if (addingNewItemRef.current) return;
         const t = (text || '').trim();
         if (!t) return;
-        focusNewItemRef.current = true;
+        addingNewItemRef.current = true;
+        focusNewItemRef.current = focusAfter;
         onUpdate({ checklist: [...(card.checklist || []), { id: uid('ck'), text: t, done: false }] });
         setNewItem('');
+        requestAnimationFrame(() => { addingNewItemRef.current = false; });
       };
 
       const moveChecklistItem = (itemId, insertIdx) => {
@@ -4058,6 +4062,7 @@
                     placeholder="Add an item — Enter to save"
                     value={newItem}
                     onChange={e => setNewItem(e.target.value)}
+                    onBlur={e => addItem(newItem, e.relatedTarget?.classList?.contains('ck-add'))}
                     onKeyDown={e => {
                       if (e.key === 'Enter') { e.preventDefault(); addItem(newItem); }
                       if (e.key === 'Escape') setNewItem('');
