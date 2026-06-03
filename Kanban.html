@@ -1093,6 +1093,53 @@
       color: var(--text-3);
       margin-bottom: 6px;
     }
+    .ck-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .ck-label-row > span {
+      min-width: 0;
+    }
+    .ck-copy {
+      width: 28px;
+      height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--card-bg);
+      color: var(--text-3);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      padding: 0;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .ck-copy:hover:not(:disabled) {
+      background: oklch(0.90 0.007 72);
+      color: var(--text-2);
+    }
+    .dark .ck-copy:hover:not(:disabled) {
+      background: oklch(0.26 0.013 65);
+    }
+    .ck-copy.copied {
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+    .ck-copy:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .ck-copy:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .ck-copy svg {
+      display: block;
+    }
     .label-pills {
       display: flex;
       flex-wrap: wrap;
@@ -1469,6 +1516,29 @@
           {idx < arr.length - 1 && <br />}
         </React.Fragment>
       ));
+    }
+
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      Object.assign(textarea.style, {
+        position: 'fixed',
+        top: '0',
+        left: '-9999px',
+        opacity: '0',
+      });
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      if (!copied) throw new Error('Copy failed');
     }
 
     function todayISO() {
@@ -3435,6 +3505,7 @@
       const [newItem, setNewItem] = useState('');
       const [ckDraggingId, setCkDraggingId] = useState(null);
       const [ckDropIdx, setCkDropIdx] = useState(null);
+      const [ckCopyState, setCkCopyState] = useState('idle');
       const modalRef = useRef(null);
       const pointerDownStartedInsideRef = useRef(false);
       const pointerDownHadEditorRef = useRef(false);
@@ -3446,11 +3517,13 @@
       const ckDropIdxRef = useRef(null);
       const focusNewItemRef = useRef(false);
       const addingNewItemRef = useRef(false);
+      const ckCopyTimerRef = useRef(null);
       const attachmentUrlRef = useRef({});
 
       useEffect(() => { setTitle(card.title); }, [card.id]);
       useEffect(() => { setNotes(card.notes); }, [card.id]);
       useEffect(() => { setNotesEditing(false); }, [card.id]);
+      useEffect(() => { setCkCopyState('idle'); }, [card.id]);
 
       useEffect(() => {
         let cancelled = false;
@@ -3491,6 +3564,10 @@
       useEffect(() => () => {
         Object.values(attachmentUrlRef.current).forEach(url => URL.revokeObjectURL(url));
         attachmentUrlRef.current = {};
+      }, []);
+
+      useEffect(() => () => {
+        clearTimeout(ckCopyTimerRef.current);
       }, []);
 
       useEffect(() => {
@@ -3661,6 +3738,28 @@
         onUpdate({ checklist: [...(card.checklist || []), { id: uid('ck'), text: t, done: false }] });
         setNewItem('');
         requestAnimationFrame(() => { addingNewItemRef.current = false; });
+      };
+
+      const checklistCopyText = () => {
+        const items = (card.checklist || []).map(item => (item.text || '').trim() || 'Untitled item');
+        const draft = newItem.trim();
+        if (draft) items.push(draft);
+        return items.map(text => `- ${text}`).join('\n');
+      };
+
+      const copyChecklist = async () => {
+        const text = checklistCopyText();
+        if (!text) return;
+        clearTimeout(ckCopyTimerRef.current);
+        try {
+          await copyTextToClipboard(text);
+          setCkCopyState('copied');
+          ckCopyTimerRef.current = setTimeout(() => setCkCopyState('idle'), 1400);
+        } catch (err) {
+          console.warn('Could not copy checklist', err);
+          setCkCopyState('error');
+          ckCopyTimerRef.current = setTimeout(() => setCkCopyState('idle'), 1400);
+        }
       };
 
       const moveChecklistItem = (itemId, insertIdx) => {
@@ -4022,9 +4121,25 @@
             </div>
 
             <div>
-              <label className="field-label">
-                Checklist {ckTotal > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text-3)' }}>· {ckDone}/{ckTotal} done</span>}
-              </label>
+              <div className="field-label ck-label-row">
+                <span>
+                  Checklist {ckTotal > 0 && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--text-3)' }}>- {ckDone}/{ckTotal} done</span>}
+                </span>
+                <button
+                  type="button"
+                  className={`ck-copy${ckCopyState === 'copied' ? ' copied' : ''}`}
+                  onClick={copyChecklist}
+                  disabled={!ckTotal && !newItem.trim()}
+                  aria-label={ckCopyState === 'copied' ? 'Checklist copied' : 'Copy checklist'}
+                  title={ckCopyState === 'copied' ? 'Copied' : ckCopyState === 'error' ? 'Copy failed' : 'Copy checklist'}
+                >
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                    <rect x="2.5" y="1.8" width="8.2" height="10.2" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+                    <path d="M5.2 4.4h3.4M5.2 7h3.4M5.2 9.6h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <path d="M5.1 13.2h5.2c1.2 0 2.2-1 2.2-2.2V4.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
               <div
                 className="ck-edit"
                 ref={ckListRef}
